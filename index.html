@@ -23,7 +23,7 @@
 		height: 30vh;
 		z-index: 1000;
 		position: absolute;
-		/*background: linear-gradient(rgba(0, 0, 0, 1), rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));*/
+		background: linear-gradient(rgba(0, 0, 0, 1), rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
 		top: 0;
 		width: 100%;
 	}
@@ -74,7 +74,8 @@
 	var theme = 2;
 	var items, background;
 	var itemwidth = widthpx / width, itemheight = heightpx / height;
-	
+
+	var queue = [], cnt = 0;	
 	var selected = null;
 	var changing = null;
 	var Shape;
@@ -362,6 +363,7 @@
 			//KJBS
 			swapShapeWithMap([height-1-selected['y'],selected['x']], [height-1-changing['y'], changing['x']]);
 			
+			
 			/*var tmp;
 			tmp = map[selected['y']][selected['x']];
 			map[selected['y']][selected['x']] = map[changing['y']][changing['x']];
@@ -373,46 +375,70 @@
 			//console.log(Shape);
 			changing = null;
 			
-			while(findShape());
-			
-			//TODO: animation;
-			for (var i in map) {
-				for (var j in map[i]) {
-					if (Shape[height-i-1][j]['num'] == '*') {
-						//console.log('destroy: ' + i + ',' + j);
-						map[i][j].object.destroy();
-						map[i][j] = 'Removed!';
-						//console.log(i + ',' + j);
-					} else if (Shape[height-i-1][j]['type'] == 'other') {
-						map[i][j].object.destroy();
-						map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
-						map[i][j].object.width = itemwidth - marginw*2;
-						map[i][j].object.height = itemheight - marginh*2;
-					} else {
-						//console.log('other ' + i + ',' + j);
+			do {
+				while(findShape()); 
+
+				//TODO: animation;
+				for (var i in map) {
+					for (var j in map[i]) {
+						if (Shape[height-i-1][j]['num'] == '*') {
+							//console.log('destroy: ' + i + ',' + j);
+							map[i][j].object.destroy();
+							map[i][j] = 'Removed!';
+							//console.log(i + ',' + j);
+						} else if (Shape[height-i-1][j]['type'] == 'other') {
+							map[i][j].object.destroy();
+							map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
+							map[i][j].object.width = itemwidth - marginw*2;
+							map[i][j].object.height = itemheight - marginh*2;
+						} else {
+							//console.log('other ' + i + ',' + j);
+						}
 					}
 				}
-			}
-				
-			var animationlist = upShape();
-			for (var i in animationlist) {
-				var tmp = animationlist[i];
-				if (tmp[0] == 'move') {
-					map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
-					//map[height-tmp[3]-1][tmp[2]].object.tint = 8000000;
-					game.add.tween(map[height-tmp[3]-1][tmp[2]].object).to({
-						x: itemwidth * (tmp[4]) + marginw,
-						y: itemheight * (height-tmp[3]-1) + marginh
-					}, 500, Phaser.Easing.Back.Out, true);
-					//console.log(height-tmp[3]-1);
-					/*map[height-tmp[3]-1][tmp[4]].object.x = itemwidth * (tmp[4]) + marginw;*/
-					map[height-tmp[3]-1][tmp[4]].object.y = itemheight * (height-tmp[3]-1) + marginh;
-					
-					//console.log("moved :" + (height-tmp[1]-1) + ',' + tmp[2] + ' to ' + (height-tmp[3]-1) + ',' + tmp[4]);
-				} else if (tmp[0] == 'newShape') {
+
+				var animationlist = upShape();
+				for (var i in animationlist) {
+					var tmp = animationlist[i];
+					if (tmp[0] == 'move') {
+						map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
+						//map[height-tmp[3]-1][tmp[2]].object.tint = 8000000;
+							
+						game.add.tween(map[height-tmp[3]-1][tmp[2]].object).to({
+							x: itemwidth * (tmp[4]) + marginw,
+							y: itemheight * (height-tmp[3]-1) + marginh
+						}, 500, Phaser.Easing.Back.Out, true);
+						//console.log(height-tmp[3]-1);
+						/*map[height-tmp[3]-1][tmp[4]].object.x = itemwidth * (tmp[4]) + marginw;*/
+						map[height-tmp[3]-1][tmp[4]].object.y = itemheight * (height-tmp[3]-1) + marginh;
+
+						//console.log("moved :" + (height-tmp[1]-1) + ',' + tmp[2] + ' to ' + (height-tmp[3]-1) + ',' + tmp[4]);
+					} else if (tmp[0] == 'newShape') {
+						map[height-tmp[3]-1][tmp[4]] = new item(tmp[1], tmp[2]);
+						map[height-tmp[3]-1][tmp[4]].object = game.add.sprite(itemwidth * tmp[4] + marginw, 0, "item_" + theme + "_" + tmp[2]);
+						map[height-tmp[3]-1][tmp[4]].object.width = itemwidth - marginw*2;
+						map[height-tmp[3]-1][tmp[4]].object.height = itemheight - marginh*2;
+						game.add.tween(map[height-tmp[3]-1][tmp[4]].object).to({
+							y: itemheight * (height-tmp[3]-1) + marginh
+						}, 500, Phaser.Easing.Back.Out, true);
+					}
 					
 				}
-			}
+				/*var interval = setInterval(function() {
+						game.add.tween(queue[0][0]).to({
+							x: queue[0][1],
+							y: queue[0][2]
+						}, 500, Phaser.Easing.Back.Out, true);
+						try {
+							queue.shift();
+						} catch (e) {
+							clearInterval(internal);
+						}
+					}, 50);*/
+			} while (findShape());
+			
+			//console.log(Shape);
+			//console.log(map);
 		} else {
 			if (selected != null) {
 				game.add.tween(selected['object'].object).to({
@@ -448,7 +474,7 @@
 		return new item('standard', getRandom(ShapeType));
 	}
 	
-	var Height = height, Width = width, ShapeType = 5;
+	var Height = height, Width = width, ShapeType = itemtypes;
 	//		var Shape = initShapeWithValue(Height, Width, 0);
 	//		var Shape = initShapeWithRandom(Height, Width);
 	var sameWidth = initArray(Height, Width), sameHeight = initArray(Height, Width);
@@ -725,7 +751,7 @@
 	function changeShape(i, j, type, num) {
 		//TODO
 		Shape[i][j] = new item(type, num);
-		console.log(['changeShape', i, j, type, num]);
+		//console.log(['changeShape', i, j, type, num]);
 		//(i, j) Shape change -> (type, num)
 	}
 	//Shape가 아이템에 의해 '*'로 바뀔때 호출됨
@@ -760,9 +786,9 @@
 		Shape[sp0[0]][sp0[1]] = Shape[sp1[0]][sp1[1]];
 		Shape[sp1[0]][sp1[1]] = temp0;
 		console.log([mp0[0], mp0[1]])
-//		temp1 = map[mp0[0]][mp0[1]];
-//		map[mp0[0]][mp0[1]] = map[mp1[0]][mp1[1]];
-//		map[mp1[0]][mp1[1]] = temp1;
+		temp1 = map[mp0[0]][mp0[1]];
+		map[mp0[0]][mp0[1]] = map[mp1[0]][mp1[1]];
+		map[mp1[0]][mp1[1]] = temp1;
 	}
 	function substituteShapeWithMap(sp0, sp1) {
 		var mp0 = [Height-1 - sp0[0], sp0[1]], mp1 = [Height-1-sp1[0], sp1[1]];
