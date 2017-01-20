@@ -157,10 +157,10 @@
 				};
 				
 				game.add.tween(map[y+height-3][x].object).to({
-					width: map[y+height-3][x].object.width + 20,
-					height: map[y+height-3][x].object.height + 20,
-					x: map[y+height-3][x].object.x - 10,
-					y: map[y+height-3][x].object.y - 10
+					width: itemwidth - marginw*2 + 20,
+					height: itemheight - marginh*2 + 20,
+					x: selected['initx'] - 10,
+					y: selected['inity'] - 10
 				}, 100, Phaser.Easing.Back.Out, true);
 
 				map[y+height-3][x].object.bringToTop();
@@ -296,8 +296,8 @@
 		//selected['object'].object.height -= 20;
 		
 		game.add.tween(selected['object'].object).to({
-			width: selected['object'].object.width - 20,
-			height: selected['object'].object.height - 20,
+			width: itemwidth - marginw*2,
+			height: itemheight - marginh*2,
 			x: selected['initx'],
 			y: selected['inity']
 		}, 500, Phaser.Easing.Back.Out, true);
