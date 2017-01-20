@@ -238,12 +238,40 @@
 		selected['object'].object.x = selected['initx'] + deltaX-10;
 		selected['object'].object.y = selected['inity'] + deltaY-10;
 		
+		//by KJBS
+		var isInOtherObject = -1;
+		
 		if (Math.abs(deltaX) > selected['object'].object.width + marginw*8) {
 			if (deltaX < 0 && selected['x'] > 0) {
+		isInOtherObject = 0;
+			} else if (deltaX > 0 && selected['x'] < width-1) {
+				isInOtherObject = 1;
+			}
+		} else if (Math.abs(deltaY) > selected['object'].object.height + marginh*8) {
+			if (deltaY < 0 && selected['y'] > height-3) {
+				isInOtherObject = 2;
+			} else if (deltaY > 0 && selected['y'] < height-1) {
+				isInOtherObject = 3;
+			}
+		}
+
+		if (changing != null && isInOtherObject != changing['where']) {
+			game.add.tween(changing['object'].object).to({
+				x: changing['initx'],
+				y: changing['inity']
+			}, 500, Phaser.Easing.Back.Out, true);
+			changing = null;
+		}
+
+
+		if (Math.abs(deltaX) > selected['object'].object.width + marginw*8) {
+			if (deltaX < 0 && selected['x'] > 0) {
+				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']][selected['x'] - 1],
 							   initx: itemwidth * (selected['x'] - 1) + marginw,
-							   inity: itemheight * (selected['y']) + marginh
+							   inity: itemheight * (selected['y']) + marginh,
+							   where: 0
 							   };
 
 					game.add.tween(changing['object'].object).to({
@@ -255,7 +283,8 @@
 				if (changing == null) {
 					changing = {object: map[selected['y']][selected['x'] + 1],
 							   initx: itemwidth * (selected['x'] + 1) + marginw,
-							   inity: itemheight * (selected['y']) + marginh
+							   inity: itemheight * (selected['y']) + marginh,
+							   where: 1
 							   };
 
 					game.add.tween(changing['object'].object).to({
@@ -263,19 +292,15 @@
 						y: selected['inity']
 					}, 500, Phaser.Easing.Back.Out, true);
 				}
-			} else if (changing != null) {
-				game.add.tween(changing['object'].object).to({
-					x: changing['initx'],
-					y: changing['inity']
-				}, 500, Phaser.Easing.Back.Out, true);
-				changing = null;
-			}
+			} 
 		} else if (Math.abs(deltaY) > selected['object'].object.height + marginh*8) {
 			if (deltaY < 0 && selected['y'] > height-3) {
+				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']-1][selected['x']],
 							   initx: itemwidth * (selected['x']) + marginw,
-							   inity: itemheight * (selected['y'] - 1) + marginh
+							   inity: itemheight * (selected['y'] - 1) + marginh,
+							   where: 2
 							   };
 
 					game.add.tween(changing['object'].object).to({
@@ -284,10 +309,12 @@
 					}, 500, Phaser.Easing.Back.Out, true);
 				}
 			} else if (deltaY > 0 && selected['y'] < height-1) {
+				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']+1][selected['x']],
 							   initx: itemwidth * (selected['x']) + marginw,
-							   inity: itemheight * (selected['y'] + 1) + marginh
+							   inity: itemheight * (selected['y'] + 1) + marginh,
+							   where: 3
 							   };
 
 					game.add.tween(changing['object'].object).to({
@@ -295,19 +322,7 @@
 						y: selected['inity']
 					}, 500, Phaser.Easing.Back.Out, true);
 				}
-			} else if (changing != null) {
-				game.add.tween(changing['object'].object).to({
-					x: changing['initx'],
-					y: changing['inity']
-				}, 500, Phaser.Easing.Back.Out, true);
-				changing = null;
 			}
-		} else if (changing != null) {
-			game.add.tween(changing['object'].object).to({
-				x: changing['initx'],
-				y: changing['inity']
-			}, 500, Phaser.Easing.Back.Out, true);
-			changing = null;
 		}
 	}
 	
@@ -325,6 +340,7 @@
 		}, 500, Phaser.Easing.Back.Out, true);
 		
 		if (changing != null) {
+			//if (isSwappable([selected['object']])
 			game.add.tween(changing['object'].object).to({
 				x: changing['initx'],
 				y: changing['inity']
@@ -633,7 +649,7 @@
 		//(i, j) Shape change -> (type, num)
 	}
 	//특정점 p0, p1에 대해서 Swap이 가능한지 True, False로 반환함.
-	function isSwapAble(p0, p1) {
+	function isSwappable(p0, p1) {
 		var diff = Math.abs(p0[0] - p1[0]) + Math.abs(p0[1] - p1[1]);
 		if (diff != 1) return false;
 		var temp;
