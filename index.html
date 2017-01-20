@@ -64,7 +64,7 @@
 	var themes_bottom_img = ['amazon_bottom.jpg', 'desert_bottom.jpg', 'space_bottom.jpg'];
 	var themes_highlight_img = ['amazon_highlight.jpg', 'desert_highlight.jpg', 'space_highlight.jpg'];
 	var themes_special_img = ['special_amazon.png', 'special_desert.png', 'special_space.png'];
-	var bgm_main = ['resources/bgm/bgm.mp3']
+	var bgm_main = ['resources/bgm/bgm.mp3'];
 	var widthpx = 780, heightpx = 1100;
 	//var widthpx = window.innerWidth, heightpx = window.innerHeight;
 	var marginw = 10, marginh = 10;
@@ -637,7 +637,7 @@
 			for(var i=0; i<3; i++)
 				for(var j=0; j<Width; j++)
 					Shape[i][j] = userShape[i][j];
-		} while(judgeHaveMatching(Height, Width));
+		} while(judgeHaveMatching(3, Width));
 	}
 	//Height * Width Map을 랜덤하게 제작
 	function initShapeWithRandom(Height, Width) {
