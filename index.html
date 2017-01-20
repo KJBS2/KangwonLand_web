@@ -65,7 +65,6 @@
 	var marginw = -10, marginh = -10;
 	
 	//============================================================
-
 	var game;
 	var map = [];
 	var theme = 2;
@@ -90,13 +89,11 @@
 			return this.type == other.type && this.num == other.num;
 		}
 	};
-
 	$(document).ready(function() {
 		game = new Phaser.Game(widthpx, heightpx, Phaser.AUTO, document.getElementById("game"));
 		game.state.add("loadMap", loadMap);
 		game.state.start("loadMap");
 	});
-
 	var loadMap = function(game) {};
 	loadMap.prototype = {
 		preload: function() {
@@ -118,7 +115,6 @@
 			game.input.onUp.add(itemdeselect);
 		}
 	};
-
 	var loadField = function() {
 		background = game.add.group();
 		var tmp;
@@ -184,7 +180,6 @@
 					x: selected['initx'] - 10,
 					y: selected['inity'] - 10
 				}, 100, Phaser.Easing.Back.Out, true);
-
 				map[y+height-3][x].object.bringToTop();
 				
 				game.input.addMoveCallback(itemmove);
@@ -235,15 +230,43 @@
 		}
 		
 
+
 		selected['object'].object.x = selected['initx'] + deltaX-10;
 		selected['object'].object.y = selected['inity'] + deltaY-10;
+
+		var isInOtherObject = -1;
 		
 		if (Math.abs(deltaX) > selected['object'].object.width + marginw*8) {
 			if (deltaX < 0 && selected['x'] > 0) {
+				isInOtherObject = 0;
+			} else if (deltaX > 0 && selected['x'] < width-1) {
+				isInOtherObject = 1;
+			}
+		} else if (Math.abs(deltaY) > selected['object'].object.height + marginh*8) {
+			if (deltaY < 0 && selected['y'] > height-3) {
+				isInOtherObject = 2;
+			} else if (deltaY > 0 && selected['y'] < height-1) {
+				isInOtherObject = 3;
+			}
+		}
+
+		if (changing != null && isInOtherObject != changing['where']) {
+			game.add.tween(changing['object'].object).to({
+				x: changing['initx'],
+				y: changing['inity']
+			}, 500, Phaser.Easing.Back.Out, true);
+			changing = null;
+		}
+
+
+		if (Math.abs(deltaX) > selected['object'].object.width + marginw*8) {
+			if (deltaX < 0 && selected['x'] > 0) {
+				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']][selected['x'] - 1],
 							   initx: itemwidth * (selected['x'] - 1) + marginw,
-							   inity: itemheight * (selected['y']) + marginh
+							   inity: itemheight * (selected['y']) + marginh,
+							   where: 0
 							   };
 
 					game.add.tween(changing['object'].object).to({
@@ -252,10 +275,12 @@
 					}, 500, Phaser.Easing.Back.Out, true);
 				}
 			} else if (deltaX > 0 && selected['x'] < width-1) {
+				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']][selected['x'] + 1],
 							   initx: itemwidth * (selected['x'] + 1) + marginw,
-							   inity: itemheight * (selected['y']) + marginh
+							   inity: itemheight * (selected['y']) + marginh,
+							   where: 1
 							   };
 
 					game.add.tween(changing['object'].object).to({
@@ -263,19 +288,15 @@
 						y: selected['inity']
 					}, 500, Phaser.Easing.Back.Out, true);
 				}
-			} else if (changing != null) {
-				game.add.tween(changing['object'].object).to({
-					x: changing['initx'],
-					y: changing['inity']
-				}, 500, Phaser.Easing.Back.Out, true);
-				changing = null;
 			}
 		} else if (Math.abs(deltaY) > selected['object'].object.height + marginh*8) {
 			if (deltaY < 0 && selected['y'] > height-3) {
+				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']-1][selected['x']],
 							   initx: itemwidth * (selected['x']) + marginw,
-							   inity: itemheight * (selected['y'] - 1) + marginh
+							   inity: itemheight * (selected['y'] - 1) + marginh,
+							   where: 2
 							   };
 
 					game.add.tween(changing['object'].object).to({
@@ -284,10 +305,12 @@
 					}, 500, Phaser.Easing.Back.Out, true);
 				}
 			} else if (deltaY > 0 && selected['y'] < height-1) {
+				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']+1][selected['x']],
 							   initx: itemwidth * (selected['x']) + marginw,
-							   inity: itemheight * (selected['y'] + 1) + marginh
+							   inity: itemheight * (selected['y'] + 1) + marginh,
+							   where: 3
 							   };
 
 					game.add.tween(changing['object'].object).to({
@@ -295,20 +318,9 @@
 						y: selected['inity']
 					}, 500, Phaser.Easing.Back.Out, true);
 				}
-			} else if (changing != null) {
-				game.add.tween(changing['object'].object).to({
-					x: changing['initx'],
-					y: changing['inity']
-				}, 500, Phaser.Easing.Back.Out, true);
-				changing = null;
 			}
-		} else if (changing != null) {
-			game.add.tween(changing['object'].object).to({
-				x: changing['initx'],
-				y: changing['inity']
-			}, 500, Phaser.Easing.Back.Out, true);
-			changing = null;
 		}
+		
 	}
 	
 	var itemdeselect = function(e) {
@@ -353,11 +365,9 @@
 	//		var Shape = initShapeWithRandom(Height, Width);
 	var sameWidth = initArray(Height, Width), sameHeight = initArray(Height, Width);
 		//printShape(Shape);
-
 	var itemNum = [['?','?'],['?','?'],['?','?'],['*','*'],['-','|'],['p','p']];
 	//var playGameIntervalid = setInterval(playGame, 500);
 	var levelCnt = 0;
-
 	function playGame() {
 		printShape(Shape);
 		var flag = false;
@@ -366,20 +376,16 @@
 		//for YunJi
 		var movementListBefore = upShape();
 		for(var ix in movementListBefore) console.log(movementListBefore[ix]);
-
 		useItem();
 		var movementListAfter = upShape();
 		for(var ix in movementListAfter) console.log(movementListAfter[ix]);
-
 		console.log("level finish" + levelCnt);
 		levelCnt++;
-
 		if(flag == false) {
 			clearInterval(playGameIntervalid);
 			console.log(levelCnt);
 		}
 	}
-
 	//Height * Width Array 0으로 초기화해서 반환
 	function initArray(Height, Width) {
 		var newShape = new Array(Height);
@@ -453,7 +459,6 @@
 		}
 		return list;
 	}
-
 	//가로로, 세로로 연속한 같은 모양의 갯수를 알아내어서 배열에 저장함.
 	function calculateSame(Height, Width) {
 		//calculate sameList
@@ -501,7 +506,6 @@
 			}
 		}
 		if(findShapeContiVal(3)) return true;
-
 		return false;
 	}
 	//findShape에 존재하는 함수.
@@ -512,7 +516,6 @@
 		for(var ix in randomList) {
 			var i = randomList[ix][0], j = randomList[ix][1], l, r;
 			if(Shape[i][j].type == 'other') continue;
-
 			var whoIsFirst = getRandom(2);
 			if(whoIsFirst == 0) {
 				var isWidth = 0;
@@ -586,14 +589,12 @@
 				}
 			} else if(Shape[i][j].num == 'p') {
 				changeShapeByItem(i, j, 'other', '*');
-
 				var randV = getRandom(ShapeType);
 				for(var fix in randomList) {
 					var x = randomList[fix][0], y = randomList[fix][1];
 					if(Shape[x][y].equals(new item('standard', randV)))
 						changeShapeByItem(x, y, 'other', '*');
 				}
-
 			}
 		}
 	}
@@ -617,7 +618,6 @@
 		}
 		return movementList;
 	}
-
 	//Shape가 매칭에 의해 '*'로 바뀌거나 새로운 아이템으로 바뀌는 경우 호출됨
 	function changeShape(i, j, type, num) {
 		//for YunJi
@@ -640,16 +640,12 @@
 		temp = Shape[p0[0]][p0[1]];
 		Shape[p0[0]][p0[1]] = Shape[p1[0]][p1[1]];
 		Shape[p1[0]][p1[1]] = temp;
-
 		var result = judgeHaveMatching(3, Width);
-
 		temp = Shape[p0[0]][p0[1]];
 		Shape[p0[0]][p0[1]] = Shape[p1[0]][p1[1]];
 		Shape[p1[0]][p1[1]] = temp;
-
 		return result;
 	}
-
 </script>
 </head>
 <body>
