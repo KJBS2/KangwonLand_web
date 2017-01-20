@@ -62,6 +62,7 @@
 	var themes_img = ['amazon.jpg', 'desert.jpg', 'space.jpg'];
 	var themes_bottom_img = ['amazon_bottom.jpg', 'desert_bottom.jpg', 'space_bottom.jpg'];
 	var themes_highlight_img = ['amazon_highlight.jpg', 'desert_highlight.jpg', 'space_highlight.jpg'];
+	var themes_special_img = ['special_amazon.png', 'special_desert.png', 'special_space.png'];
 	var widthpx = 780, heightpx = 1100;
 	//var widthpx = window.innerWidth, heightpx = window.innerHeight;
 	var marginw = -10, marginh = -10;
@@ -111,6 +112,7 @@
 				game.load.image("background_" + i, "resources/background/" + themes_img[i]);
 				game.load.image("background_bottom_" + i, "resources/background/" + themes_bottom_img[i]);
 				game.load.image("background_highlight_" + i, "resources/background/" + themes_highlight_img[i]);
+				game.load.image("special_" + i, "resources/items/" + themes_special_img[i]);
 			}
 		},
 		create: function() {
@@ -371,20 +373,36 @@
 			//console.log(Shape);
 			changing = null;
 			
-			while(findShape()) {
-				//TODO: animation;
-				var animationlist = upShape();
-				for (var i in animationlist) {
-					var tmp = animationlist[i];
-					if (tmp[0] == 'move') {
-						game.add.tween(map[height-tmp[1]-1][tmp[2]].object).to({
-							x: itemwidth * (tmp[4]) + marginw,
-							y: itemheight * (height-tmp[3]-1) + marginh
-						}, 500, Phaser.Easing.Back.Out, true);
-						console.log("moved" + tmp.toString());
+			while(findShape());
+			
+			//TODO: animation;
+			for (var i in map) {
+				for (var j in map[i]) {
+					if (Shape[height-i-1][j]['num'] == '*') {
+						console.log('destroy: ' + i + ',' + j);
+						map[i][j].object.destroy();
+						map[i][j] = 'Removed!';
+						console.log(i + ',' + j);
+					} else if (Shape[height-i-1][j]['type'] == 'other') {
+						map[i][j].object.destroy();
+						map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
+						map[i][j].object.width = itemwidth - marginw*2;
+						map[i][j].object.height = itemheight - marginh*2;
 					}
 				}
-				break;
+			}
+
+				
+			var animationlist = upShape();
+			for (var i in animationlist) {
+				var tmp = animationlist[i];
+				if (tmp[0] == 'move') {
+					game.add.tween(map[height-tmp[1]-1][tmp[2]].object).to({
+						x: itemwidth * (tmp[4]) + marginw,
+						y: itemheight * (height-tmp[3]-1) + marginh
+					}, 500, Phaser.Easing.Back.Out, true);
+					console.log("moved" + tmp.toString());
+				}
 			}
 		} else {
 			game.add.tween(selected['object'].object).to({
