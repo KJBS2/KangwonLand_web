@@ -115,6 +115,7 @@
 				game.load.image("background_highlight_" + i, "resources/background/" + themes_highlight_img[i]);
 				game.load.image("special_" + i, "resources/items/" + themes_special_img[i]);
 			}
+			game.load.spritesheet('effect', 'resources/effects/effect.png', 128, 128);
 		},
 		create: function() {
 			loadField();
@@ -375,6 +376,8 @@
 			//console.log(Shape);
 			changing = null;
 			
+			queue = [];
+			
 			do {
 				while(findShape()); 
 
@@ -383,6 +386,9 @@
 					for (var j in map[i]) {
 						if (Shape[height-i-1][j]['num'] == '*') {
 							//console.log('destroy: ' + i + ',' + j);
+							var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
+							effect.animations.add('destroy');
+							effect.animations.play('destroy', 60, false, true);
 							map[i][j].object.destroy();
 							map[i][j] = 'Removed!';
 							//console.log(i + ',' + j);
@@ -404,13 +410,15 @@
 						map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
 						//map[height-tmp[3]-1][tmp[2]].object.tint = 8000000;
 							
-						game.add.tween(map[height-tmp[3]-1][tmp[2]].object).to({
+						/*game.add.tween(map[height-tmp[3]-1][tmp[2]].object).to({
 							x: itemwidth * (tmp[4]) + marginw,
 							y: itemheight * (height-tmp[3]-1) + marginh
-						}, 500, Phaser.Easing.Back.Out, true);
+						}, 500, Phaser.Easing.Back.Out, true);*/
+						queue.push([map[height-tmp[3]-1][tmp[2]].object, itemwidth * (tmp[4]) + marginw, itemheight * (height-tmp[3]-1) + marginh]);
 						//console.log(height-tmp[3]-1);
 						/*map[height-tmp[3]-1][tmp[4]].object.x = itemwidth * (tmp[4]) + marginw;*/
-						map[height-tmp[3]-1][tmp[4]].object.y = itemheight * (height-tmp[3]-1) + marginh;
+						
+						//map[height-tmp[3]-1][tmp[4]].object.y = itemheight * (height-tmp[3]-1) + marginh;
 
 						//console.log("moved :" + (height-tmp[1]-1) + ',' + tmp[2] + ' to ' + (height-tmp[3]-1) + ',' + tmp[4]);
 					} else if (tmp[0] == 'newShape') {
@@ -437,9 +445,25 @@
 					}, 50);*/
 			} while (findShape());
 			
+			var interval = setInterval(function() {
+				try {
+					game.add.tween(queue[0][0]).to({
+						x: queue[0][1],
+						y: queue[0][2]
+					}, 500, Phaser.Easing.Back.Out, true);
+
+					queue.shift();
+				} catch (e) {
+					clearInterval(interval);
+				}
+			}, 20);
+			
 			//console.log(Shape);
 			//console.log(map);
+		} else if (changing == null && selected != null && selected['object']['type'] == 'other') {
+			console.log("clicked item");
 		} else {
+			console.log(selected['object']['type']);
 			if (selected != null) {
 				game.add.tween(selected['object'].object).to({
 					width: itemwidth - marginw*2,
