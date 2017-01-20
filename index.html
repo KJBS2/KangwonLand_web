@@ -64,6 +64,7 @@
 	var themes_bottom_img = ['amazon_bottom.jpg', 'desert_bottom.jpg', 'space_bottom.jpg'];
 	var themes_highlight_img = ['amazon_highlight.jpg', 'desert_highlight.jpg', 'space_highlight.jpg'];
 	var themes_special_img = ['special_amazon.png', 'special_desert.png', 'special_space.png'];
+	var bgm_main = ['resources/bgm/bgm.mp3']
 	var widthpx = 780, heightpx = 1100;
 	//var widthpx = window.innerWidth, heightpx = window.innerHeight;
 	var marginw = 10, marginh = 10;
@@ -120,6 +121,7 @@
 				game.load.image("special_" + i, "resources/items/" + themes_special_img[i]);
 			}
 			game.load.spritesheet('effect', 'resources/effects/effect.png', 128, 128);
+			game.load.audio('bgm', bgm_main);
 		},
 		create: function() {
 			loadField();
@@ -635,7 +637,7 @@
 			for(var i=0; i<3; i++)
 				for(var j=0; j<Width; j++)
 					Shape[i][j] = userShape[i][j];
-		} while(judgeHaveMatching(3, Width));
+		} while(judgeHaveMatching(Height, Width));
 	}
 	//Height * Width Map을 랜덤하게 제작
 	function initShapeWithRandom(Height, Width) {
@@ -866,7 +868,7 @@
 		Shape[p0[0]][p0[1]] = Shape[p1[0]][p1[1]];
 		Shape[p1[0]][p1[1]] = temp;
 
-		var result = judgeHaveMatching(3, Width);
+		var result = judgeHaveMatching(Height, Width);
 
 		temp = Shape[p0[0]][p0[1]];
 		Shape[p0[0]][p0[1]] = Shape[p1[0]][p1[1]];
