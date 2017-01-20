@@ -269,6 +269,8 @@
 				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']][selected['x'] - 1],
+							   x: selected['x']-1,
+							   y: selected['y'],
 							   initx: itemwidth * (selected['x'] - 1) + marginw,
 							   inity: itemheight * (selected['y']) + marginh,
 							   where: 0
@@ -282,6 +284,8 @@
 			} else if (deltaX > 0 && selected['x'] < width-1) {
 				if (changing == null) {
 					changing = {object: map[selected['y']][selected['x'] + 1],
+							   x: selected['x']+1,
+							   y: selected['y'],
 							   initx: itemwidth * (selected['x'] + 1) + marginw,
 							   inity: itemheight * (selected['y']) + marginh,
 							   where: 1
@@ -298,6 +302,8 @@
 				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']-1][selected['x']],
+							   x: selected['x'],
+							   y: selected['y']-1,
 							   initx: itemwidth * (selected['x']) + marginw,
 							   inity: itemheight * (selected['y'] - 1) + marginh,
 							   where: 2
@@ -312,6 +318,8 @@
 				isInOtherObject = true;
 				if (changing == null) {
 					changing = {object: map[selected['y']+1][selected['x']],
+							   x: selected['x'],
+							   y: selected['y']+1,
 							   initx: itemwidth * (selected['x']) + marginw,
 							   inity: itemheight * (selected['y'] + 1) + marginh,
 							   where: 3
@@ -332,20 +340,46 @@
 		//selected['object'].object.width -= 20;
 		//selected['object'].object.height -= 20;
 		
-		game.add.tween(selected['object'].object).to({
-			width: itemwidth - marginw*2,
-			height: itemheight - marginh*2,
-			x: selected['initx'],
-			y: selected['inity']
-		}, 500, Phaser.Easing.Back.Out, true);
-		
-		if (changing != null) {
-			//if (isSwappable([selected['object']])
-			game.add.tween(changing['object'].object).to({
+		if (isSwappable([height-selected['y']-1, selected['x']], [height-changing['y']-1, changing['x']])) {
+			game.add.tween(selected['object'].object).to({
+				width: itemwidth - marginw*2,
+				height: itemheight - marginh*2,
 				x: changing['initx'],
 				y: changing['inity']
 			}, 500, Phaser.Easing.Back.Out, true);
+			
+			game.add.tween(changing['object'].object).to({
+				x: selected['initx'],
+				y: selected['inity']
+			}, 500, Phaser.Easing.Back.Out, true);
+			
+			
+			
+			var tmp;
+			tmp = map[selected['y']][selected['x']];
+			map[selected['y']][selected['x']] = map[changing['y']][changing['x']];
+			map[changing['y']][changing['x']] = tmp;
+			
+			tmp = Shape[height-selected['y']-1][selected['x']];
+			Shape[height-selected['y']-1][selected['x']] = Shape[height-changing['y']-1][changing['x']];
+			Shape[height-changing['y']-1][changing['x']] = tmp;
+			console.log(Shape);
 			changing = null;
+		} else {
+			game.add.tween(selected['object'].object).to({
+				width: itemwidth - marginw*2,
+				height: itemheight - marginh*2,
+				x: selected['initx'],
+				y: selected['inity']
+			}, 500, Phaser.Easing.Back.Out, true);
+
+			if (changing != null) {
+				game.add.tween(changing['object'].object).to({
+					x: changing['initx'],
+					y: changing['inity']
+				}, 500, Phaser.Easing.Back.Out, true);
+				changing = null;
+			}
 		}
 		
 		selected = null;
@@ -410,12 +444,12 @@
 			initShapeWithNoMatching(Height, Width);
 			var haveAnswer = false;
 			for(var i=0; i<2; i++) for(var j=0; j<Width; j++)
-				if(isSwapAble([i, j], [i+1, j])) {
+				if(isSwappable([i, j], [i+1, j])) {
 					haveAnswer = true; console.log([i, j]); break;
 				}
 			if(haveAnswer) return true;
 			for(var i=0; i<3; i++) for(var j=1; j<Width; j++)
-				if(isSwapAble([i, j], [i, j-1])) {
+				if(isSwappable([i, j], [i, j-1])) {
 					haveAnswer = true; console.log([i, j]); break;
 				}
 			if(haveAnswer) return true;
