@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>운빨좆망겜</title>
 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <script src="phaser.min.js"></script>
@@ -13,7 +14,8 @@
 		width: 780px;
 		height: 1100px;
 		margin-left: 122px;
-		margin-top: -400px;
+		top: -400px;
+		position: absolute;
 		background-color: black;
 		overflow: hidden;
 	}
@@ -157,6 +159,7 @@
 	};
 	
 	var itemselect = function(e) {
+		//e.preventDefault();
 		var x = 0 | (e.clientX - 90) / ((945-90)/width);
 		var y = 0 | (e.clientY - 347) / ((645-347)/3);
 		if (y < 0 || y >= 3 || x < 0 || x >= width || e.clientY < 347) {
@@ -190,9 +193,11 @@
 				game.input.addMoveCallback(itemmove);
 			}
 		}
+		return false;
 	}
 	
 	var itemmove = function(e) {
+		//e.preventDefault();
 		//console.log("test");
 		var deltaX = e.clientX - selected['startx'];
 		var deltaY = e.clientY - selected['starty'];
@@ -215,10 +220,6 @@
 		var maxX = selected['object'].object.width + marginw*4;
 		var maxY = selected['object'].object.height + marginh*4;
 		
-		if (e.clientY < 347) {
-			deltaY = 347 - selected['starty'];
-		}
-		
 		if (Math.abs(deltaX) > maxX) {
 			if (deltaX > 0) {
 				deltaX = maxX;
@@ -236,7 +237,8 @@
 		
 
 		selected['object'].object.x = selected['initx'] + deltaX-10;
-		selected['object'].object.y = selected['inity'] + deltaY-10;
+		selected['object'].object.y = Math.max(selected['inity'] + deltaY-10, 750);
+		//console.log(selected['object'].object.y);
 		
 		//by KJBS
 		var isInOtherObject = -1;
@@ -332,6 +334,7 @@
 				}
 			}
 		}
+		return false;
 	}
 	
 	var itemdeselect = function(e) {
@@ -340,7 +343,7 @@
 		//selected['object'].object.width -= 20;
 		//selected['object'].object.height -= 20;
 		
-		if (isSwappable([height-selected['y']-1, selected['x']], [height-changing['y']-1, changing['x']])) {
+		if (changing != null && isSwappable([height-selected['y']-1, selected['x']], [height-changing['y']-1, changing['x']])) {
 			game.add.tween(selected['object'].object).to({
 				width: itemwidth - marginw*2,
 				height: itemheight - marginh*2,
@@ -363,8 +366,16 @@
 			tmp = Shape[height-selected['y']-1][selected['x']];
 			Shape[height-selected['y']-1][selected['x']] = Shape[height-changing['y']-1][changing['x']];
 			Shape[height-changing['y']-1][changing['x']] = tmp;
-			console.log(Shape);
+			//console.log(Shape);
 			changing = null;
+			
+			while(findShape()) {
+				//TODO: animation;
+				var animationlist = upShape();
+				for (var i in animationlist) {
+					
+				}
+			}
 		} else {
 			game.add.tween(selected['object'].object).to({
 				width: itemwidth - marginw*2,
@@ -670,14 +681,14 @@
 
 	//Shape가 매칭에 의해 '*'로 바뀌거나 새로운 아이템으로 바뀌는 경우 호출됨
 	function changeShape(i, j, type, num) {
-		//for YunJi
+		//TODO
 		Shape[i][j] = new item(type, num);
 		console.log(['changeShape', i, j, type, num]);
 		//(i, j) Shape change -> (type, num)
 	}
 	//Shape가 아이템에 의해 '*'로 바뀔때 호출됨
 	function changeShapeByItem(i, j, type, num) {
-		//for YunJi
+		//TODO
 		Shape[i][j] = new item(type, num);
 		console.log(['changeShapeByItem', i, j, type, num]);
 		//(i, j) Shape change -> (type, num)
