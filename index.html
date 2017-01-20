@@ -23,7 +23,7 @@
 		height: 30vh;
 		z-index: 1000;
 		position: absolute;
-		background: linear-gradient(rgba(0, 0, 0, 1), rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+		/*background: linear-gradient(rgba(0, 0, 0, 1), rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));*/
 		top: 0;
 		width: 100%;
 	}
@@ -379,38 +379,49 @@
 			for (var i in map) {
 				for (var j in map[i]) {
 					if (Shape[height-i-1][j]['num'] == '*') {
-						console.log('destroy: ' + i + ',' + j);
+						//console.log('destroy: ' + i + ',' + j);
 						map[i][j].object.destroy();
 						map[i][j] = 'Removed!';
-						console.log(i + ',' + j);
+						//console.log(i + ',' + j);
 					} else if (Shape[height-i-1][j]['type'] == 'other') {
 						map[i][j].object.destroy();
 						map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
 						map[i][j].object.width = itemwidth - marginw*2;
 						map[i][j].object.height = itemheight - marginh*2;
+					} else {
+						//console.log('other ' + i + ',' + j);
 					}
 				}
 			}
-
 				
 			var animationlist = upShape();
 			for (var i in animationlist) {
 				var tmp = animationlist[i];
 				if (tmp[0] == 'move') {
-					game.add.tween(map[height-tmp[1]-1][tmp[2]].object).to({
+					map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
+					//map[height-tmp[3]-1][tmp[2]].object.tint = 8000000;
+					game.add.tween(map[height-tmp[3]-1][tmp[2]].object).to({
 						x: itemwidth * (tmp[4]) + marginw,
 						y: itemheight * (height-tmp[3]-1) + marginh
 					}, 500, Phaser.Easing.Back.Out, true);
-					console.log("moved" + tmp.toString());
+					//console.log(height-tmp[3]-1);
+					/*map[height-tmp[3]-1][tmp[4]].object.x = itemwidth * (tmp[4]) + marginw;*/
+					map[height-tmp[3]-1][tmp[4]].object.y = itemheight * (height-tmp[3]-1) + marginh;
+					
+					//console.log("moved :" + (height-tmp[1]-1) + ',' + tmp[2] + ' to ' + (height-tmp[3]-1) + ',' + tmp[4]);
+				} else if (tmp[0] == 'newShape') {
+					
 				}
 			}
 		} else {
-			game.add.tween(selected['object'].object).to({
-				width: itemwidth - marginw*2,
-				height: itemheight - marginh*2,
-				x: selected['initx'],
-				y: selected['inity']
-			}, 500, Phaser.Easing.Back.Out, true);
+			if (selected != null) {
+				game.add.tween(selected['object'].object).to({
+					width: itemwidth - marginw*2,
+					height: itemheight - marginh*2,
+					x: selected['initx'],
+					y: selected['inity']
+				}, 500, Phaser.Easing.Back.Out, true);
+			}
 
 			if (changing != null) {
 				game.add.tween(changing['object'].object).to({
@@ -749,14 +760,14 @@
 		Shape[sp0[0]][sp0[1]] = Shape[sp1[0]][sp1[1]];
 		Shape[sp1[0]][sp1[1]] = temp0;
 		console.log([mp0[0], mp0[1]])
-		temp1 = map[mp0[0]][mp0[1]];
-		map[mp0[0]][mp0[1]] = map[mp1[0]][mp1[1]];
-		map[mp1[0]][mp1[1]] = temp1;
+//		temp1 = map[mp0[0]][mp0[1]];
+//		map[mp0[0]][mp0[1]] = map[mp1[0]][mp1[1]];
+//		map[mp1[0]][mp1[1]] = temp1;
 	}
 	function substituteShapeWithMap(sp0, sp1) {
 		var mp0 = [Height-1 - sp0[0], sp0[1]], mp1 = [Height-1-sp1[0], sp1[1]];
 		Shape[sp0[0]][sp0[1]] = Shape[sp1[0]][sp1[1]];
-		map[mp0[0]][mp0[1]] = map[mp1[0]][mp1[1]];
+//		map[mp0[0]][mp0[1]] = map[mp1[0]][mp1[1]];
 	}
 
 
