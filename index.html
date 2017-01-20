@@ -1,0 +1,653 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>운빨좆망겜</title>
+<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+<script src="phaser.min.js"></script>
+<style type="text/css">
+	#game {
+		transform: perspective(600px) rotateX(35deg) scaleX(0.8) scaleY(0.7);
+		width: 780px;
+		height: 1100px;
+		margin-left: 122px;
+		margin-top: -400px;
+		background-color: black;
+		overflow: hidden;
+	}
+	#mask {
+		height: 30vh;
+		z-index: 1000;
+		position: absolute;
+		background: linear-gradient(rgba(0, 0, 0, 1), rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+		top: 0;
+		width: 100%;
+	}
+	html body {
+		padding: 0;
+		margin: 0;
+		background-color: black;
+	}
+	#background {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 100vh;
+		z-index: -1000;
+		background-repeat: no-repeat;
+		background-size: cover;
+	}
+</style>
+<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+<script>
+	"use strict";
+	var width = 7, height = 12;
+	var itemtypes = 5;
+	var items_img = [['amazon_01.png', 'amazon_02.png', 'amazon_03.png', 'amazon_04.png', 'amazon_05.png'],
+					 ['desert_01.png', 'desert_02.png', 'desert_03.png', 'desert_04.png', 'desert_05.png'],
+					 ['space_01.png', 'space_02.png', 'space_03.png', 'space_04.png', 'space_05.png'], ]
+	var themes = ['amazon', 'desert', 'space'];
+	var themes_img = ['amazon.jpg', 'desert.jpg', 'space.jpg'];
+	var themes_bottom_img = ['amazon_bottom.jpg', 'desert_bottom.jpg', 'space_bottom.jpg'];
+	var themes_highlight_img = ['amazon_highlight.jpg', 'desert_highlight.jpg', 'space_highlight.jpg'];
+	var widthpx = 780, heightpx = 1100;
+	//var widthpx = window.innerWidth, heightpx = window.innerHeight;
+	var marginw = -10, marginh = -10;
+	
+	//============================================================
+
+	var game;
+	var map = [];
+	var theme = 2;
+	var items, background;
+	var itemwidth = widthpx / width, itemheight = heightpx / height;
+	
+	var selected = null;
+	var changing = null;
+	
+	var item = function() {
+		this.type = 'standard';
+		this.num = 0;
+	};
+	item.prototype = {
+	};
+
+	$(document).ready(function() {
+		game = new Phaser.Game(widthpx, heightpx, Phaser.AUTO, document.getElementById("game"));
+		game.state.add("loadMap", loadMap);
+		game.state.start("loadMap");
+	});
+
+	var loadMap = function(game) {};
+	loadMap.prototype = {
+		preload: function() {
+			for (var i in items_img) {
+				for (var j in items_img[i]) {
+					game.load.image("item_" + i + "_" + j, "resources/items/" + items_img[i][j]);
+				}
+			}
+			for(var i in themes) {
+				game.load.image("background_" + i, "resources/background/" + themes_img[i]);
+				game.load.image("background_bottom_" + i, "resources/background/" + themes_bottom_img[i]);
+				game.load.image("background_highlight_" + i, "resources/background/" + themes_highlight_img[i]);
+			}
+		},
+		create: function() {
+			loadField();
+			game.input.maxPointers = 1; //prevent multi-touch
+			game.input.onDown.add(itemselect);
+			game.input.onUp.add(itemdeselect);
+		}
+	};
+
+	var loadField = function() {
+		background = game.add.group();
+		var tmp;
+		
+		tmp = game.add.sprite(0, itemheight * (height-4), "background_highlight_" + theme);
+		tmp.width = widthpx;
+		background.add(tmp);
+		
+		tmp = game.add.sprite(0, itemheight * (height-3), "background_bottom_" + theme);
+		tmp.width = widthpx;
+		background.add(tmp);
+		
+		$("#background").css('background-image', 'url("resources/background/' + themes_img[theme] + '")');
+		
+		items = game.add.group();
+		for (var i = 0; i < height; i++) {
+			map.push([]);
+			for(var j = 0; j < width; j++) {
+				var tmp = new item();
+				tmp.num = game.rnd.between(0, itemtypes-1);
+				tmp.object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "item_" + theme + "_" + tmp.num);
+				tmp.object.width = itemwidth - marginw*2;
+				tmp.object.height = itemheight - marginh*2;
+				
+				map[i].push(tmp);
+				//items.add(tmp);
+			}
+		}
+		//console.log(map);
+	};
+	
+	var itemselect = function(e) {
+		var x = 0 | (e.clientX - 90) / ((945-90)/width);
+		var y = 0 | (e.clientY - 347) / ((645-347)/3);
+		if (y < 0 || y >= 3 || x < 0 || x >= width || e.clientY < 347) {
+			return false;
+		} else {
+			if (selected == null) {
+				//console.log(map);
+				//map[y+height-3][x].object.width += 20;
+				//map[y+height-3][x].object.height += 20;
+				//map[y+height-3][x].object.x -= 10;
+				//map[y+height-3][x].object.y -= 10;
+				selected = {
+					object: map[y+height-3][x],
+					x: x,
+					y: y+height-3,
+					startx: e.clientX,
+					starty: e.clientY,
+					initx: itemwidth * x + marginw,
+					inity: itemheight * (y+height-3) + marginh
+				};
+				
+				game.add.tween(map[y+height-3][x].object).to({
+					width: map[y+height-3][x].object.width + 20,
+					height: map[y+height-3][x].object.height + 20,
+					x: map[y+height-3][x].object.x - 10,
+					y: map[y+height-3][x].object.y - 10
+				}, 100, Phaser.Easing.Back.Out, true);
+
+				map[y+height-3][x].object.bringToTop();
+				
+				game.input.addMoveCallback(itemmove);
+			}
+		}
+	}
+	
+	var itemmove = function(e) {
+		//console.log("test");
+		var deltaX = e.clientX - selected['startx'];
+		var deltaY = e.clientY - selected['starty'];
+		var maxDelta = selected['object'].object.width*10;
+		if (Math.abs(deltaX * deltaY) >= maxDelta) {
+			if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+				if (deltaY >= 0) {
+					deltaY = Math.abs(maxDelta / deltaX);
+				} else {
+					deltaY = -Math.abs(maxDelta / deltaX);
+				}
+			} else {
+				if (deltaX >= 0) {
+					deltaX = Math.abs(maxDelta / deltaY);
+				} else {
+					deltaX = -Math.abs(maxDelta / deltaY);
+				}
+			}
+		}
+		var maxX = selected['object'].object.width + marginw*4;
+		var maxY = selected['object'].object.height + marginh*4;
+		
+		if (e.clientY < 347) {
+			deltaY = 347 - selected['starty'];
+		}
+		
+		if (Math.abs(deltaX) > maxX) {
+			if (deltaX > 0) {
+				deltaX = maxX;
+			} else {
+				deltaX = -maxX;
+			}
+		}
+		if (Math.abs(deltaY) > maxY) {
+			if (deltaY > 0) {
+				deltaY = maxY;
+			} else {
+				deltaY = -maxY;
+			}
+		}
+		
+
+		selected['object'].object.x = selected['initx'] + deltaX-10;
+		selected['object'].object.y = selected['inity'] + deltaY-10;
+		
+		if (Math.abs(deltaX) > selected['object'].object.width + marginw*8) {
+			if (deltaX < 0 && selected['x'] > 0) {
+				if (changing == null) {
+					changing = {object: map[selected['y']][selected['x'] - 1],
+							   initx: itemwidth * (selected['x'] - 1) + marginw,
+							   inity: itemheight * (selected['y']) + marginh
+							   };
+
+					game.add.tween(changing['object'].object).to({
+						x: selected['initx'],
+						y: selected['inity']
+					}, 500, Phaser.Easing.Back.Out, true);
+				}
+			} else if (deltaX > 0 && selected['x'] < width-1) {
+				if (changing == null) {
+					changing = {object: map[selected['y']][selected['x'] + 1],
+							   initx: itemwidth * (selected['x'] + 1) + marginw,
+							   inity: itemheight * (selected['y']) + marginh
+							   };
+
+					game.add.tween(changing['object'].object).to({
+						x: selected['initx'],
+						y: selected['inity']
+					}, 500, Phaser.Easing.Back.Out, true);
+				}
+			} else if (changing != null) {
+				game.add.tween(changing['object'].object).to({
+					x: changing['initx'],
+					y: changing['inity']
+				}, 500, Phaser.Easing.Back.Out, true);
+				changing = null;
+			}
+		} else if (Math.abs(deltaY) > selected['object'].object.height + marginh*8) {
+			if (deltaY < 0 && selected['y'] > height-3) {
+				if (changing == null) {
+					changing = {object: map[selected['y']-1][selected['x']],
+							   initx: itemwidth * (selected['x']) + marginw,
+							   inity: itemheight * (selected['y'] - 1) + marginh
+							   };
+
+					game.add.tween(changing['object'].object).to({
+						x: selected['initx'],
+						y: selected['inity']
+					}, 500, Phaser.Easing.Back.Out, true);
+				}
+			} else if (deltaY > 0 && selected['y'] < height-1) {
+				if (changing == null) {
+					changing = {object: map[selected['y']+1][selected['x']],
+							   initx: itemwidth * (selected['x']) + marginw,
+							   inity: itemheight * (selected['y'] + 1) + marginh
+							   };
+
+					game.add.tween(changing['object'].object).to({
+						x: selected['initx'],
+						y: selected['inity']
+					}, 500, Phaser.Easing.Back.Out, true);
+				}
+			} else if (changing != null) {
+				game.add.tween(changing['object'].object).to({
+					x: changing['initx'],
+					y: changing['inity']
+				}, 500, Phaser.Easing.Back.Out, true);
+				changing = null;
+			}
+		} else if (changing != null) {
+			game.add.tween(changing['object'].object).to({
+				x: changing['initx'],
+				y: changing['inity']
+			}, 500, Phaser.Easing.Back.Out, true);
+			changing = null;
+		}
+	}
+	
+	var itemdeselect = function(e) {
+		//selected['object'].object.x += 10;
+		//selected['object'].object.y += 10;
+		//selected['object'].object.width -= 20;
+		//selected['object'].object.height -= 20;
+		
+		game.add.tween(selected['object'].object).to({
+			width: selected['object'].object.width - 20,
+			height: selected['object'].object.height - 20,
+			x: selected['initx'],
+			y: selected['inity']
+		}, 500, Phaser.Easing.Back.Out, true);
+		
+		if (changing != null) {
+			game.add.tween(changing['object'].object).to({
+				x: changing['initx'],
+				y: changing['inity']
+			}, 500, Phaser.Easing.Back.Out, true);
+			changing = null;
+		}
+		
+		selected = null;
+		game.input.deleteMoveCallback(itemmove);
+	}
+</script>
+
+<script>
+	function getRandomBetween(low, high) {
+		return (0 | Math.random() * (high - low + 1) + low);
+	}
+	function getRandom(intval) {
+		return Math.floor(Math.random() * intval);
+	}
+	function newRandomShape() {
+		return new _item('standard', getRandom(ShapeType));
+	}
+	//_item
+	var _item = function() {
+		this.type = 'standard';
+		this.num = 0;
+	};
+	_item = function(typeVal, numVal) {
+		this.type = typeVal;
+		this.num = numVal;
+	};
+	_item.prototype = {
+		equals: function(other) {
+			return this.type == other.type && this.num == other.num;
+		}
+	};
+
+	var Height = height, Width = width, ShapeType = 5;
+	//		var Shape = initShapeWithValue(Height, Width, 0);
+	//		var Shape = initShapeWithRandom(Height, Width);
+	var sameWidth = initArray(Height, Width), sameHeight = initArray(Height, Width);
+	var Shape; initShapeWithNoMatchingAndHaveAnswer(Height, Width);
+		//printShape(Shape);
+
+	var itemNum = [['?','?'],['?','?'],['?','?'],['*','*'],['-','|'],['p','p']];
+	//var playGameIntervalid = setInterval(playGame, 500);
+	var levelCnt = 0;
+
+	function playGame() {
+		printShape(Shape);
+		var flag = false;
+		while(findShape()) 
+		flag = true;
+		//for YunJi
+		var movementListBefore = upShape();
+		for(var ix in movementListBefore) console.log(movementListBefore[ix]);
+
+		useItem();
+		var movementListAfter = upShape();
+		for(var ix in movementListAfter) console.log(movementListAfter[ix]);
+
+		console.log("level finish" + levelCnt);
+		levelCnt++;
+
+		if(flag == false) {
+			clearInterval(playGameIntervalid);
+			console.log(levelCnt);
+		}
+	}
+
+	//Height * Width Array 0으로 초기화해서 반환
+	function initArray(Height, Width) {
+		var newShape = new Array(Height);
+		for(var i=0; i<Height; i++) newShape[i] = new Array(Width);
+		for(var i=0; i<Height; i++) for(var j=0; j<Width; j++) 
+		newShape[i][j] = 0;
+		return newShape;
+	}
+	//사용자 조작 부분에서 매칭이 존재하지 않고, 답이 존재하기 맵을 제작
+	function initShapeWithNoMatchingAndHaveAnswer(Height, Width) {
+		while(1) {
+			initShapeWithNoMatching(Height, Width);
+			var haveAnswer = false;
+			for(var i=0; i<2; i++) for(var j=0; j<Width; j++)
+				if(isSwapAble([i, j], [i+1, j])) {
+					haveAnswer = true; console.log([i, j]); break;
+				}
+			if(haveAnswer) return true;
+			for(var i=0; i<3; i++) for(var j=1; j<Width; j++)
+				if(isSwapAble([i, j], [i, j-1])) {
+					haveAnswer = true; console.log([i, j]); break;
+				}
+			if(haveAnswer) return true;
+		}
+	}
+	//사용자 조작 부분에서 매칭이 존재하지 않게 맵을 제작
+	function initShapeWithNoMatching(Height, Width) {
+		Shape = initShapeWithRandom(Height, Width);
+		do {
+			var userShape = initShapeWithRandom(3, Width);
+			for(var i=0; i<3; i++)
+				for(var j=0; j<Width; j++)
+					Shape[i][j] = userShape[i][j];
+		} while(judgeHaveMatching(3, Width));
+	}
+	//Height * Width Map을 랜덤하게 제작
+	function initShapeWithRandom(Height, Width) {
+		var newShape = new Array(Height);
+		for(var i=0; i<Height; i++) newShape[i] = new Array(Width);
+		for(var i=0; i<Height; i++) for(var j=0; j<Width; j++) 
+		newShape[i][j] = newRandomShape();
+		return newShape;
+	}
+	//Height * Width Map을 모든 값을 value로 채워서 제작 (테스트용)
+	function initShapeWithValue(Height, Width, value) {
+		var newShape = new Array(Height);
+		for(var i=0; i<Height; i++) newShape[i] = new Array(Width);
+		for(var i=0; i<Height; i++) for(var j=0; j<Width; j++) 
+		newShape[i][j] = new _item('standard', value);
+		return newShape;
+	}
+	//Height * Width Map을 출력 (Debug 용)
+	function printShape() {
+		var nowPrint = "";
+		for(var i=0; i<Height; i++, nowPrint += "<br>") 
+		for(var j=0; j<Width; j++) nowPrint += Shape[i][j].num + " ";
+		nowPrint += "<br>"		
+		$("body").prepend(nowPrint)
+	}
+	//Height * Width개의 [y, x]를 randomSuffle해서 List(?)로 반환
+	function randomSuffle() {
+		var list = [];
+		for(var i=0; i<Height; i++)
+			for(var j=0; j<Width; j++)
+				list.push([i, j]);
+		for(var ix=0; ix<Height*Width; ix++) {
+			var randIx = getRandomBetween(ix, Height*Width-1);
+			var temp = list[randIx];
+			list[randIx] = list[ix];
+			list[ix] = temp;
+		}
+		return list;
+	}
+
+	//가로로, 세로로 연속한 같은 모양의 갯수를 알아내어서 배열에 저장함.
+	function calculateSame(Height, Width) {
+		//calculate sameList
+		for(var i=0; i<Height; i++)
+			for(var j=0, ix; j<Width; j=ix+1) {
+				for(ix=j; ix+1<Width && Shape[i][ix].equals(Shape[i][ix+1]); ix++);
+				for(var k=j; k<=ix; k++) sameWidth[i][k] = ix-j+1;
+			}
+		for(var j=0; j<Width; j++)
+			for(var i=0, ix; i<Height; i=ix+1) {
+				for(ix=i; ix+1<Height && Shape[ix][j].equals(Shape[ix+1][j]); ix++);
+				for(var k=i; k<=ix; k++) sameHeight[k][j] = ix-i+1;
+			}
+	}
+	//Height * Width에서 매칭이 존재하는지 존재하지 않는지 판단
+	function judgeHaveMatching(Height, Width) {
+		calculateSame(Height, Width);
+		for(var i=0; i<Height; i++) for(var j=0; j<Width; j++)
+		if(sameWidth[i][j] >= 3 || sameHeight[i][j] >= 3) return true;
+		return false;
+	}
+	//Map에서 만족하는 매칭이 있으면 True 없으면 False
+	//있다면 그 매칭을 삭제하고, 아이템이 생기는 경우면 랜덤한 위치에 생성함
+	//findShapeContiVal과, T, L 자 모양을 판단함
+	function findShape() {
+		calculateSame(Height, Width);
+		if(findShapeContiVal(5)) return true;
+		if(findShapeContiVal(4)) return true;
+		var randomList = randomSuffle();
+		for(var ix in randomList) {
+			var i = randomList[ix][0], j = randomList[ix][1];
+			if(Shape[i][j].type == 'other') continue;
+			if(sameWidth[i][j] >= 3 && sameHeight[i][j] >= 3) {
+				var hl, hr, wl, wr;
+				for(hl=i; hl-1>=0 && Shape[hl][j].equals(Shape[hl-1][j]); hl--);
+				for(hr=i; hr+1<Height && Shape[hr][j].equals(Shape[hr+1][j]); hr++);
+				for(wl=j; wl-1>=0 && Shape[i][wl].equals(Shape[i][wl-1]); wl--);
+				for(wr=j; wr+1<Width && Shape[i][wr].equals(Shape[i][wr+1]); wr++);
+				for(var k=hl; k<=hr; k++)
+				changeShape(k, j, 'other', '*');
+				for(var k=wl; k<=wr; k++)
+				changeShape(i, k, 'other', '*');
+				changeShape(i, j, 'other', 'b');
+				return true;
+			}
+		}
+		if(findShapeContiVal(3)) return true;
+
+		return false;
+	}
+	//findShape에 존재하는 함수.
+	//세로 혹은 가로의 연속한 val개 이상의 같은 값이 있으면 True 없으면 False
+	//있다면 그 매칭을 삭제하고, 아이템이 생기는 경우면 랜덤한 위치에 생성함
+	function findShapeContiVal(val) {
+		var randomList = randomSuffle();
+		for(var ix in randomList) {
+			var i = randomList[ix][0], j = randomList[ix][1], l, r;
+			if(Shape[i][j].type == 'other') continue;
+
+			var whoIsFirst = getRandom(2);
+			if(whoIsFirst == 0) {
+				var isWidth = 0;
+				if(sameHeight[i][j] >= val) {
+					for(l=i; l-1>=0 && Shape[l][j].equals(Shape[l-1][j]); l--);
+					for(r=i; r+1<Height && Shape[r][j].equals(Shape[r+1][j]); r++);
+					for(var k=l; k<=r; k++)
+						changeShape(k, j, 'other', '*');
+					var o = getRandomBetween(l, r);
+					changeShape(o, j, 'other', itemNum[val][isWidth]);
+					return true;
+				}
+				isWidth = 1;
+				if(sameWidth[i][j] >= val) {
+					for(l=j; l-1>=0 && Shape[i][l].equals(Shape[i][l-1]); l--);
+					for(r=j; r+1<Width && Shape[i][r].equals(Shape[i][r+1]); r++);
+					for(var k=l; k<=r; k++)
+						changeShape(i, k, 'other', '*');
+					var o = getRandomBetween(l, r);
+					changeShape(i, o, 'other', itemNum[val][isWidth]);
+					return true;
+				}
+			} else {
+				var isWidth = 1;
+				if(sameWidth[i][j] >= val) {
+					for(l=j; l-1>=0 && Shape[i][l].equals(Shape[i][l-1]); l--);
+					for(r=j; r+1<Width && Shape[i][r].equals(Shape[i][r+1]); r++);
+					for(var k=l; k<=r; k++)
+						changeShape(i, k, 'other', '*');
+					var o = getRandomBetween(l, r);
+					changeShape(i, o, 'other', itemNum[val][isWidth]);
+					return true;
+				}
+				isWidth = 0;
+				if(sameHeight[i][j] >= val) {
+					for(l=i; l-1>=0 && Shape[l][j].equals(Shape[l-1][j]); l--);
+					for(r=i; r+1<Height && Shape[r][j].equals(Shape[r+1][j]); r++);
+					for(var k=l; k<=r; k++)
+						changeShape(k, j, 'other', '*');
+					var o = getRandomBetween(l, r);
+					changeShape(o, j, 'other', itemNum[val][isWidth]);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	//Map에 존재하는 _item을 랜덤한 순서로 사용함
+	function useItem() {
+		var randomList = randomSuffle();
+		for(var ix in randomList) {
+			var i = randomList[ix][0], j = randomList[ix][1];
+			if(Shape[i][j].num == '-') {
+				changeShapeByItem(i, j, 'other', '*');
+				for(var k=0; k<Width; k++)
+				if(Shape[i][k].type == 'standard')
+					changeShape(i, k, 'other', '*');
+			} else if(Shape[i][j].num == '|') {
+				changeShapeByItem(i, j, 'other', '*');
+				for(var k=0; k<Height; k++)
+				if(Shape[k][j].type == 'standard')
+					changeShapeByItem(k, j, 'other', '*');
+			} else if(Shape[i][j].num == 'b') {
+				changeShapeByItem(i, j, 'other', '*');
+				var chXY = [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1]];
+				for(var k=0; k<8; k++) {
+					var x = i + chXY[k][0], y = j + chXY[k][1];
+					if(x < 0 || y < 0 || x >= Height || y >= Width) continue;
+					if(Shape[x][y].type == 'standard')
+						changeShapeByItem(x, y, 'other', '*');
+				}
+			} else if(Shape[i][j].num == 'p') {
+				changeShapeByItem(i, j, 'other', '*');
+
+				var randV = getRandom(ShapeType);
+				for(var fix in randomList) {
+					var x = randomList[fix][0], y = randomList[fix][1];
+					if(Shape[x][y].equals(new _item('standard', randV)))
+						changeShapeByItem(x, y, 'other', '*');
+				}
+
+			}
+		}
+	}
+	//Map에 빈 칸('*')이 있는 경우 모두 올려줌. (높이가 큰 곳에서 낮은 곳으로 내림)
+	function upShape() {
+		var movementList = [];
+		for(var j=0; j<Width; j++) {
+			var newIx = 0;
+			for(var i=0; i<Height; i++) {
+				if(Shape[i][j].num != '*') {
+					movementList.push(['move', i, j, newIx, j]);
+					//(i, j) -> (newIx, j);
+					Shape[newIx++][j] = Shape[i][j];
+				}
+			}
+			for(var i=newIx; i<Height; i++) {
+				Shape[i][j] = newRandomShape();
+				movementList.push(['newShape', Shape[i][j].type, Shape[i][j].num, i, j]);
+				//Shape(type, num) -> (i, j)
+			}
+		}
+		return movementList;
+	}
+
+	//Shape가 매칭에 의해 '*'로 바뀌거나 새로운 아이템으로 바뀌는 경우 호출됨
+	function changeShape(i, j, type, num) {
+		//for YunJi
+		Shape[i][j] = new _item(type, num);
+		console.log(['changeShape', i, j, type, num]);
+		//(i, j) Shape change -> (type, num)
+	}
+	//Shape가 아이템에 의해 '*'로 바뀔때 호출됨
+	function changeShapeByItem(i, j, type, num) {
+		//for YunJi
+		Shape[i][j] = new _item(type, num);
+		console.log(['changeShapeByItem', i, j, type, num]);
+		//(i, j) Shape change -> (type, num)
+	}
+	//특정점 p0, p1에 대해서 Swap이 가능한지 True, False로 반환함.
+	function isSwapAble(p0, p1) {
+		var diff = Math.abs(p0[0] - p1[0]) + Math.abs(p0[1] - p1[1]);
+		if (diff != 1) return false;
+		var temp;
+		temp = Shape[p0[0]][p0[1]];
+		Shape[p0[0]][p0[1]] = Shape[p1[0]][p1[1]];
+		Shape[p1[0]][p1[1]] = temp;
+
+		var result = judgeHaveMatching(3, Width);
+
+		temp = Shape[p0[0]][p0[1]];
+		Shape[p0[0]][p0[1]] = Shape[p1[0]][p1[1]];
+		Shape[p1[0]][p1[1]] = temp;
+
+		return result;
+	}
+
+</script>
+</head>
+<body>
+<div id="background"></div>
+<div id="mask"></div>
+<div id="game"></div>
+</body>
+</html>
