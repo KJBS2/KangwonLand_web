@@ -67,12 +67,16 @@
 	
 	var selected = null;
 	var changing = null;
+	var Shape;
 	
 	var item = function() {
 		this.type = 'standard';
 		this.num = 0;
 	};
 	item.prototype = {
+		equals: function(other) {
+			return this.type == other.type && this.num == other.num;
+		}
 	};
 
 	$(document).ready(function() {
@@ -113,16 +117,22 @@
 		
 		tmp = game.add.sprite(0, itemheight * (height-3), "background_bottom_" + theme);
 		tmp.width = widthpx;
+		tmp.height = widthpx; //set height same as width
 		background.add(tmp);
 		
 		$("#background").css('background-image', 'url("resources/background/' + themes_img[theme] + '")');
+		
+		//=====Initialize map=====
+		initShapeWithNoMatchingAndHaveAnswer(height, width);
+		console.log("Map created");
+		//====================
 		
 		items = game.add.group();
 		for (var i = 0; i < height; i++) {
 			map.push([]);
 			for(var j = 0; j < width; j++) {
 				var tmp = new item();
-				tmp.num = game.rnd.between(0, itemtypes-1);
+				tmp.num = Shape[height-i-1][j]['num'];
 				tmp.object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "item_" + theme + "_" + tmp.num);
 				tmp.object.width = itemwidth - marginw*2;
 				tmp.object.height = itemheight - marginh*2;
@@ -323,28 +333,13 @@
 		return Math.floor(Math.random() * intval);
 	}
 	function newRandomShape() {
-		return new _item('standard', getRandom(ShapeType));
+		return new item('standard', getRandom(ShapeType));
 	}
-	//_item
-	var _item = function() {
-		this.type = 'standard';
-		this.num = 0;
-	};
-	_item = function(typeVal, numVal) {
-		this.type = typeVal;
-		this.num = numVal;
-	};
-	_item.prototype = {
-		equals: function(other) {
-			return this.type == other.type && this.num == other.num;
-		}
-	};
-
+	
 	var Height = height, Width = width, ShapeType = 5;
 	//		var Shape = initShapeWithValue(Height, Width, 0);
 	//		var Shape = initShapeWithRandom(Height, Width);
 	var sameWidth = initArray(Height, Width), sameHeight = initArray(Height, Width);
-	var Shape; initShapeWithNoMatchingAndHaveAnswer(Height, Width);
 		//printShape(Shape);
 
 	var itemNum = [['?','?'],['?','?'],['?','?'],['*','*'],['-','|'],['p','p']];
@@ -406,6 +401,8 @@
 			for(var i=0; i<3; i++)
 				for(var j=0; j<Width; j++)
 					Shape[i][j] = userShape[i][j];
+			console.log(Shape);
+			break;
 		} while(judgeHaveMatching(3, Width));
 	}
 	//Height * Width Map을 랜덤하게 제작
@@ -421,7 +418,7 @@
 		var newShape = new Array(Height);
 		for(var i=0; i<Height; i++) newShape[i] = new Array(Width);
 		for(var i=0; i<Height; i++) for(var j=0; j<Width; j++) 
-		newShape[i][j] = new _item('standard', value);
+		newShape[i][j] = new item('standard', value);
 		return newShape;
 	}
 	//Height * Width Map을 출력 (Debug 용)
@@ -430,7 +427,7 @@
 		for(var i=0; i<Height; i++, nowPrint += "<br>") 
 		for(var j=0; j<Width; j++) nowPrint += Shape[i][j].num + " ";
 		nowPrint += "<br>"		
-		$("body").prepend(nowPrint)
+		//$("body").prepend(nowPrint)
 	}
 	//Height * Width개의 [y, x]를 randomSuffle해서 List(?)로 반환
 	function randomSuffle() {
@@ -553,7 +550,7 @@
 		}
 		return false;
 	}
-	//Map에 존재하는 _item을 랜덤한 순서로 사용함
+	//Map에 존재하는 item을 랜덤한 순서로 사용함
 	function useItem() {
 		var randomList = randomSuffle();
 		for(var ix in randomList) {
@@ -583,7 +580,7 @@
 				var randV = getRandom(ShapeType);
 				for(var fix in randomList) {
 					var x = randomList[fix][0], y = randomList[fix][1];
-					if(Shape[x][y].equals(new _item('standard', randV)))
+					if(Shape[x][y].equals(new item('standard', randV)))
 						changeShapeByItem(x, y, 'other', '*');
 				}
 
@@ -614,14 +611,14 @@
 	//Shape가 매칭에 의해 '*'로 바뀌거나 새로운 아이템으로 바뀌는 경우 호출됨
 	function changeShape(i, j, type, num) {
 		//for YunJi
-		Shape[i][j] = new _item(type, num);
+		Shape[i][j] = new item(type, num);
 		console.log(['changeShape', i, j, type, num]);
 		//(i, j) Shape change -> (type, num)
 	}
 	//Shape가 아이템에 의해 '*'로 바뀔때 호출됨
 	function changeShapeByItem(i, j, type, num) {
 		//for YunJi
-		Shape[i][j] = new _item(type, num);
+		Shape[i][j] = new item(type, num);
 		console.log(['changeShapeByItem', i, j, type, num]);
 		//(i, j) Shape change -> (type, num)
 	}
