@@ -402,8 +402,6 @@
 			
 			queue = [];
 			
-			var playingnow = false;
-			
 			do {
 				while(findShape()); 
 
@@ -412,25 +410,10 @@
 					for (var j in map[i]) {
 						if (Shape[height-i-1][j]['num'] == '*') {
 							//console.log('destroy: ' + i + ',' + j);
-							queue.push(['bomb', itemwidth * j, itemheight * i]);
-							map[i][j].object.destroy();
-							map[i][j] = 'Removed!';
-							if (playingnow == false) {
-								var music = game.add.audio('fireworks');
-								music.play();
-								playingnow = true;
-							}
+							queue.push(['bomb', itemwidth * j, itemheight * i, i, j]);
 							//console.log(i + ',' + j);
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
-							var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
-							effect.animations.add('destroy');
-							effect.animations.play('destroy', 60, false, true);
-							
-							map[i][j].object.destroy();
-							map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
-							map[i][j].object.width = itemwidth - marginw*2;
-							map[i][j].object.height = itemheight - marginh*2;
-							map[i][j]['type'] = 'other';
+							queue.push(['item', i, j]);
 						} else {
 							//console.log('other ' + i + ',' + j);
 						}
@@ -441,14 +424,14 @@
 				for (var i in animationlist) {
 					var tmp = animationlist[i];
 					if (tmp[0] == 'move') {
-						map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
+						//map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
 						//map[height-tmp[3]-1][tmp[2]].object.tint = 8000000;
 							
 						/*game.add.tween(map[height-tmp[3]-1][tmp[2]].object).to({
 							x: itemwidth * (tmp[4]) + marginw,
 							y: itemheight * (height-tmp[3]-1) + marginh
 						}, 500, Phaser.Easing.Back.Out, true);*/
-						queue.push(['move', map[height-tmp[3]-1][tmp[2]].object, itemwidth * (tmp[4]) + marginw, itemheight * (height-tmp[3]-1) + marginh]);
+						queue.push(['move', map[height-tmp[3]-1][tmp[2]].object, itemwidth * (tmp[4]) + marginw, itemheight * (height-tmp[3]-1) + marginh, tmp]);
 						//console.log(height-tmp[3]-1);
 						/*map[height-tmp[3]-1][tmp[4]].object.x = itemwidth * (tmp[4]) + marginw;*/
 						
@@ -456,13 +439,7 @@
 
 						//console.log("moved :" + (height-tmp[1]-1) + ',' + tmp[2] + ' to ' + (height-tmp[3]-1) + ',' + tmp[4]);
 					} else if (tmp[0] == 'newShape') {
-						map[height-tmp[3]-1][tmp[4]] = new item(tmp[1], tmp[2]);
-						map[height-tmp[3]-1][tmp[4]].object = game.add.sprite(itemwidth * tmp[4] + marginw, 0, "item_" + theme + "_" + tmp[2]);
-						map[height-tmp[3]-1][tmp[4]].object.width = itemwidth - marginw*2;
-						map[height-tmp[3]-1][tmp[4]].object.height = itemheight - marginh*2;
-						game.add.tween(map[height-tmp[3]-1][tmp[4]].object).to({
-							y: itemheight * (height-tmp[3]-1) + marginh
-						}, 500, Phaser.Easing.Back.Out, true);
+						queue.push(['newshape', tmp]);
 					}
 					
 				}
@@ -479,23 +456,55 @@
 					}, 50);*/
 			} while (findShape());
 			
+			var playingnow = false;
+			
 			var interval = setInterval(function() {
-				try {
+				if (queue.length == 0) {
+					clearInterval(interval);
+				} else {
 					if (queue[0][0] == 'move') {
 						game.add.tween(queue[0][1]).to({
 							x: queue[0][2],
 							y: queue[0][3]
 						}, 500, Phaser.Easing.Back.Out, true);
+						var tmp = queue[0][4];
+						map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
 					} else if (queue[0][0] == 'bomb') {
 						var effect = game.add.sprite(queue[0][1], queue[0][2], 'effect');
 						effect.animations.add('destroy');
-						effect.animations.play('destroy', 180, false, true);
+						effect.animations.play('destroy', 240, false, true);
+						if (playingnow == false) {
+							var music = game.add.audio('fireworks');
+							music.play();
+							playingnow = true;
+						}
+
+						map[queue[0][3]][queue[0][4]].object.destroy();
+						map[queue[0][3]][queue[0][4]] = 'Removed!';
+					} else if (queue[0][0] == 'item') {
+						var i = queue[0][1], j = queue[0][2];
+						var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
+						effect.animations.add('destroy');
+						effect.animations.play('destroy', 60, false, true);
+
+						map[i][j].object.destroy();
+						map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
+						map[i][j].object.width = itemwidth - marginw*2;
+						map[i][j].object.height = itemheight - marginh*2;
+						map[i][j]['type'] = 'other';
+					} else if (queue[0][0] == 'newshape') {
+						var tmp = queue[0][1];
+						map[height-tmp[3]-1][tmp[4]] = new item(tmp[1], tmp[2]);
+						map[height-tmp[3]-1][tmp[4]].object = game.add.sprite(itemwidth * tmp[4] + marginw, 0, "item_" + theme + "_" + tmp[2]);
+						map[height-tmp[3]-1][tmp[4]].object.width = itemwidth - marginw*2;
+						map[height-tmp[3]-1][tmp[4]].object.height = itemheight - marginh*2;
+						game.add.tween(map[height-tmp[3]-1][tmp[4]].object).to({
+							y: itemheight * (height-tmp[3]-1) + marginh
+						}, 500, Phaser.Easing.Back.Out, true);
 					}
-					queue.shift();
-				} catch (e) {
-					clearInterval(interval);
+					queue.shi
 				}
-			}, 50);
+			}, 20);
 			
 			if (game.rnd.between(0, theme_change) == 0) {
 				var newtheme = game.rnd.between(0, 2);
