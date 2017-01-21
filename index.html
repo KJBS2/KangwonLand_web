@@ -36,7 +36,7 @@
 		bottom: 0;
 		width: 100%;
 		background: rgba(0, 0, 0, 0.4);
-		padding-top: 4px;
+ 		padding-top: 4px;
 	}
 	html body {
 		padding: 0;
@@ -54,7 +54,6 @@
 		background-repeat: no-repeat;
 		background-size: cover;
 	}
-	
 	#wrap_line{
 		float:left;
 		padding:10px;
@@ -83,11 +82,10 @@
 		float:left;
 		padding:10px;	
 	}
-	
+
 	.value {
 		text-shadow: 2px 2px 4px #000000;
 	}
-	
 	#bonusgame {
 		position: absolute;
 		left: calc((1024 - 800) / 2);
@@ -289,8 +287,8 @@
 				}
 			}
 		}
-		var maxX = selected['object'].object.width;
-		var maxY = selected['object'].object.height;
+		var maxX = selected['object'].object.width; // + maxDeltaX;
+		var maxY = selected['object'].object.height; // + maxDeltaY;
 		
 		if (Math.abs(deltaX) > maxX) {
 			if (deltaX > 0) {
@@ -450,7 +448,6 @@
 			
 			var playingnow = false;
 			var playPhase = 0;
-
 			do {
 				while(findShape()); 
 				playPhase++;
@@ -460,33 +457,8 @@
 					for (var j in map[i]) {
 						if (Shape[height-i-1][j]['num'] == '*') {
 							queue.push(['bomb', i, j]);
-
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
 							queue.push(['newItem', i, j]);
-
-						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
-							queue.push(['newItem', i, j]);
-							//console.log('destroy: ' + i + ',' + j);
-							queue.push(['bomb', itemwidth * j, itemheight * i]);
-							map[i][j].object.destroy();
-							map[i][j] = 'Removed!';
-							if (playingnow == false) {
-								var music = game.add.audio('fireworks');
-								music.play();
-								playingnow = true;
-							}
-							//console.log(i + ',' + j);
-						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
-							var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
-							effect.animations.add('destroy');
-							effect.animations.play('destroy', 60, false, true);
-							
-							map[i][j].object.destroy();
-							map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
-							map[i][j].object.width = itemwidth - marginw*2;
-							map[i][j].object.height = itemheight - marginh*2;
-							map[i][j]['type'] = 'other';
-
 						} else {
 							//console.log('other ' + i + ',' + j);
 						}
@@ -498,29 +470,6 @@
 					var tmp = animationlist[i];
 					if (tmp[0] == 'move') {
 						queue.push(['move', height-tmp[1]-1, tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
-
-						map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
-						//map[height-tmp[3]-1][tmp[2]].object.tint = 8000000;
-							
-						/*game.add.tween(map[height-tmp[3]-1][tmp[2]].object).to({
-							x: itemwidth * (tmp[4]) + marginw,
-							y: itemheight * (height-tmp[3]-1) + marginh
-						}, 500, Phaser.Easing.Back.Out, true);*/
-						queue.push(['move', map[height-tmp[3]-1][tmp[2]].object, itemwidth * (tmp[4]) + marginw, itemheight * (height-tmp[3]-1) + marginh]);
-						//console.log(height-tmp[3]-1);
-						/*map[height-tmp[3]-1][tmp[4]].object.x = itemwidth * (tmp[4]) + marginw;*/
-						
-						//map[height-tmp[3]-1][tmp[4]].object.y = itemheight * (height-tmp[3]-1) + marginh;
-
-						//console.log("moved :" + (height-tmp[1]-1) + ',' + tmp[2] + ' to ' + (height-tmp[3]-1) + ',' + tmp[4]);
-					} else if (tmp[0] == 'newShape') {
-						map[height-tmp[3]-1][tmp[4]] = new item(tmp[1], tmp[2]);
-						map[height-tmp[3]-1][tmp[4]].object = game.add.sprite(itemwidth * tmp[4] + marginw, 0, "item_" + theme + "_" + tmp[2]);
-						map[height-tmp[3]-1][tmp[4]].object.width = itemwidth - marginw*2;
-						map[height-tmp[3]-1][tmp[4]].object.height = itemheight - marginh*2;
-						game.add.tween(map[height-tmp[3]-1][tmp[4]].object).to({
-							y: itemheight * (height-tmp[3]-1) + marginh
-						}, 500, Phaser.Easing.Back.Out, true);
 					}
 				}
 				for (var i in animationlist) {
@@ -557,8 +506,9 @@
 						queue.push(['newShape', tmp[1], tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
 					}
 				}
-        
 				if(playPhase > 6 && judgeHaveMatching(3, Width)) break;
+
+
 			} while (findShape());
 			
 			var interval = setInterval(function() {
@@ -577,7 +527,6 @@
 								x: (itemwidth  * toJ) + marginw,
 								y: (itemheight * toI) + marginh
 							}, 200, Phaser.Easing.Back.Out, true);
-							}, 500, Phaser.Easing.Back.Out, true);
 							queue.shift();
 						}while(queue.length > 0 && queue[0][0] == 'move' && queue[0][5] == nowPhase);
 					} else if (queue[0][0] == 'bomb') {
@@ -596,7 +545,10 @@
 						var effect = game.add.sprite(itemwidth * j, itemheight * i, 'effect');
 						effect.animations.add('destroy');
 						effect.animations.play('destroy', 360, false, true);
-						effect.animations.play('destroy', 180, false, true);
+						
+						var music = game.add.audio('fireworks');
+						music.play();
+						
 						queue.shift();
 					}else if(queue[0][0] == 'newItem')
 					{
@@ -606,8 +558,7 @@
 						var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
 						effect.animations.add('destroy');
 						effect.animations.play('destroy', 360, false, true);
-						effect.animations.play('destroy', 60, false, true);
-
+						
 						map[i][j].object.destroy();
 						map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
 						map[i][j].object.width = itemwidth - marginw*2;
@@ -637,27 +588,6 @@
 					console.log(e);
 						clearInterval(interval);	
 //					clearInterval(interval);
-							}, 500, Phaser.Easing.Back.Out, true);
-							queue.shift();
-						}while(queue.length > 0 && queue[0][0] == 'newShape' && queue[0][5] == nowPhase);
-					}
-				} catch (e) {
-					console.log(e);
-						clearInterval(interval);	
-//					clearInterval(interval);
-					if (queue[0][0] == 'move') {
-						game.add.tween(queue[0][1]).to({
-							x: queue[0][2],
-							y: queue[0][3]
-						}, 500, Phaser.Easing.Back.Out, true);
-					} else if (queue[0][0] == 'bomb') {
-						var effect = game.add.sprite(queue[0][1], queue[0][2], 'effect');
-						effect.animations.add('destroy');
-						effect.animations.play('destroy', 180, false, true);
-					}
-					queue.shift();
-				} catch (e) {
-					clearInterval(interval);
 				}
 			}, 50);
 			
@@ -1101,7 +1031,7 @@
 		Shape[p0[0]][p0[1]] = Shape[p1[0]][p1[1]];
 		Shape[p1[0]][p1[1]] = temp;
 
-		var result = judgeHaveMatching(Height, Width);
+		var result = judgeHaveMatching(3, Width);
 
 		temp = Shape[p0[0]][p0[1]];
 		Shape[p0[0]][p0[1]] = Shape[p1[0]][p1[1]];
@@ -1216,7 +1146,7 @@
 
 <script>
 	var width_bonusgame = 800, height_bonusgame = 600;
-	var bonusgame = new Phaser.Game(width_bonusgame, height_bonusgame, Phaser.AUTO, document.getElementById("bonusgame"), { preload: preload, create: create, update: update });
+	//var bonusgame = new Phaser.Game(width_bonusgame, height_bonusgame, Phaser.AUTO, document.getElementById("bonusgame"), { preload: preload, create: create, update: update });
 	var timer = 0;
 	var total = 0;
 	var isPlayingBgm=false;
@@ -1317,6 +1247,7 @@
 <div id="background"></div>
 <div id="mask"></div>
 <div id="game"></div>
+<div id="control"></div>
 <div id="control">
 	<div id="wrap_line">
 	<div class="value" id="field_line" style="color: white; font-size: 2.0em;">LINE: 0</div>

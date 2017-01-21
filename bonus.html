@@ -1,0 +1,116 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Bonus Game - Space</title>
+    <script type="text/javascript" src="phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+var game = new Phaser.Game(800, 600, Phaser.AUTO, 'phaser-example', { preload: preload, create: create, update: update });
+var timer = 0;
+var total = 0;
+var isPlayingBgm=false;
+
+var spaces=['space_1','space_2','space_3','space_4','space_5'];
+var i;
+var pos = [-100,-80,-60,-40,-20];
+var count = 0;
+
+function preload() {
+
+    for (i=0; i<5; i++){
+        var temp = spaces[i];
+        game.load.spritesheet(temp,temp + ".png");
+    }
+	game.load.spritesheet('effect','effect.png',128,128);
+    game.load.audio('bonus_background','bonus_background.mp3');
+    game.load.audio('bonus_pick','bonus_pick.mp3');
+
+    game.load.image('space', 'space.jpg');
+
+}
+
+function create() {
+
+    text = game.add.text(16, 16, 'Click a sprite', { fill: '#ffffff' });
+    timer = game.time.now;
+    endTime = game.time.now + 5*1000;
+
+    var background = game.add.sprite(0, 0, 'space');
+    background.scale.setTo(1.5,1.5);
+    background.addChild(text)
+
+}
+
+function releaseTargets() {
+    
+        var temp = spaces[0|Math.random() * 5];
+        var icon = game.add.sprite(-100, game.world.randomY, temp);
+        icon.inputEnabled = true;
+        icon.events.onInputDown.add(clicked,this);
+        game.add.tween(icon).to({ x: game.width + (1600 + icon.x), y: game.world.randomY}, 5000, Phaser.Easing.Linear.None, true);
+    
+}
+
+function update() {
+  if(game.time.now<endTime)
+    {
+        if(!isPlayingBgm)
+        {
+            var sound=new Phaser.Sound(game,'bonus_background');
+            if(sound.isDecoded)
+            {
+                sound.play();
+                console.log(sound);
+                isPlayingBgm=true;
+            }
+        }
+
+        if (game.time.now > timer)
+        {
+            timer=timer+250;
+            releaseTargets();
+            updateText();
+        }
+    }
+    else closeBonusGame();
+}
+
+function closeBonusGame()
+{
+    // Bonus Game Should be close in here
+    console.log("Bonus Game Should be close in here");
+}
+
+function clicked(sprite) {
+
+    var effect = game.add.sprite(sprite.x+sprite.width/2-64, sprite.y+sprite.height/2-64, 'effect');
+
+    effect.animations.add('explode');
+    effect.animations.play('explode', 30, false, true);
+
+    var sound=new Phaser.Sound(game,'bonus_pick');
+    sound.play();
+
+    sprite.destroy();
+
+    count++;
+}
+
+function updateText() {
+
+
+    text.setText("You have clicked " + count + " times !");
+
+}
+
+</script>
+</body>
+</html>
