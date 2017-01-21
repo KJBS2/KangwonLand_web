@@ -450,7 +450,7 @@
 			
 			var playingnow = false;
 			var playPhase = 0;
-      
+
 			do {
 				while(findShape()); 
 				playPhase++;
@@ -460,6 +460,10 @@
 					for (var j in map[i]) {
 						if (Shape[height-i-1][j]['num'] == '*') {
 							queue.push(['bomb', i, j]);
+
+						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
+							queue.push(['newItem', i, j]);
+
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
 							queue.push(['newItem', i, j]);
 							//console.log('destroy: ' + i + ',' + j);
@@ -482,6 +486,7 @@
 							map[i][j].object.width = itemwidth - marginw*2;
 							map[i][j].object.height = itemheight - marginh*2;
 							map[i][j]['type'] = 'other';
+
 						} else {
 							//console.log('other ' + i + ',' + j);
 						}
@@ -493,6 +498,7 @@
 					var tmp = animationlist[i];
 					if (tmp[0] == 'move') {
 						queue.push(['move', height-tmp[1]-1, tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
+
 						map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
 						//map[height-tmp[3]-1][tmp[2]].object.tint = 8000000;
 							
@@ -551,9 +557,8 @@
 						queue.push(['newShape', tmp[1], tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
 					}
 				}
-				
-
-
+        
+				if(playPhase > 6 && judgeHaveMatching(3, Width)) break;
 			} while (findShape());
 			
 			var interval = setInterval(function() {
@@ -571,6 +576,7 @@
 							game.add.tween(map[toI][toJ].object).to({
 								x: (itemwidth  * toJ) + marginw,
 								y: (itemheight * toI) + marginh
+							}, 200, Phaser.Easing.Back.Out, true);
 							}, 500, Phaser.Easing.Back.Out, true);
 							queue.shift();
 						}while(queue.length > 0 && queue[0][0] == 'move' && queue[0][5] == nowPhase);
@@ -589,6 +595,7 @@
 
 						var effect = game.add.sprite(itemwidth * j, itemheight * i, 'effect');
 						effect.animations.add('destroy');
+						effect.animations.play('destroy', 360, false, true);
 						effect.animations.play('destroy', 180, false, true);
 						queue.shift();
 					}else if(queue[0][0] == 'newItem')
@@ -598,8 +605,9 @@
 
 						var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
 						effect.animations.add('destroy');
+						effect.animations.play('destroy', 360, false, true);
 						effect.animations.play('destroy', 60, false, true);
-						
+
 						map[i][j].object.destroy();
 						map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
 						map[i][j].object.width = itemwidth - marginw*2;
@@ -621,6 +629,14 @@
 							map[i][j].object.height = itemheight - marginh*2;
 							game.add.tween(map[i][j].object).to({
 								y: itemheight * i + marginh
+							}, 200, Phaser.Easing.Back.Out, true);
+							queue.shift();
+						}while(queue.length > 0 && queue[0][0] == 'newShape' && queue[0][5] == nowPhase);
+					}
+				} catch (e) {
+					console.log(e);
+						clearInterval(interval);	
+//					clearInterval(interval);
 							}, 500, Phaser.Easing.Back.Out, true);
 							queue.shift();
 						}while(queue.length > 0 && queue[0][0] == 'newShape' && queue[0][5] == nowPhase);
