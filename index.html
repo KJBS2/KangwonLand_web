@@ -8,6 +8,7 @@
 <title>운빨좆망겜</title>
 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <script src="phaser.min.js"></script>
+<link href="https://fonts.googleapis.com/css?family=Noto+Sans" rel="stylesheet">
 <style type="text/css">
 	#game {
 		transform: perspective(600px) rotateX(35deg) scaleX(0.8) scaleY(0.7) rotateY(0deg);
@@ -22,7 +23,7 @@
 	}
 	#mask {
 		height: 30vh;
-		z-index: 1000;
+		z-index: 500;
 		position: absolute;
 		background: linear-gradient(rgba(0, 0, 0, 1), rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
 		top: 0;
@@ -30,15 +31,18 @@
 	}
 	#control {
 		height: 15vh;
-		z-index: 1001;
+		z-index: -999;
 		position: absolute;
 		bottom: 0;
 		width: 100%;
+		background: rgba(0, 0, 0, 0.4);
+		padding-top: 4px;
 	}
 	html body {
 		padding: 0;
 		margin: 0;
 		background-color: black;
+		font-family: 'Noto Sans', sans-serif;
 	}
 	#background {
 		position: fixed;
@@ -49,6 +53,46 @@
 		z-index: -1000;
 		background-repeat: no-repeat;
 		background-size: cover;
+	}
+	
+	#wrap_line{
+		float:left;
+		padding:10px;
+		width: 20%;
+	}
+	
+	#wrap_bet{
+		float:left;
+		padding:10px;
+		width: 20%;
+	}
+
+	#wrap_total_win{
+		float:left;
+		padding:10px;
+		width: 20%;
+	}
+
+	#wrap_collect{
+		float:left;
+		padding:10px;
+		width: 20%;
+	}
+
+	#wrap_auto_gamble{
+		float:left;
+		padding:10px;	
+	}
+	
+	.value {
+		text-shadow: 2px 2px 4px #000000;
+	}
+	
+	#bonusgame {
+		position: absolute;
+		left: calc((1024 - 800) / 2);
+		top: calc((768 - 600) / 2);
+		z-index: 600;
 	}
 </style>
 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
@@ -67,6 +111,7 @@
 	var bgm_main = ['resources/bgm/bgm.mp3'];
 	var effect_audio = ['resources/effects/fireworks.wav'];
 	var swap_audio = ['resources/effects/swap.wav'];
+	var coin_audio = ['resources/effects/coin.wav'];
 	
 	var widthpx = 780, heightpx = 1100;
 	//var widthpx = window.innerWidth, heightpx = window.innerHeight;
@@ -127,6 +172,7 @@
 			game.load.audio('bgm', bgm_main);
 			game.load.audio('fireworks', effect_audio);
 			game.load.audio('swap', swap_audio);
+			game.load.audio('coin', coin_audio);
 		},
 		create: function() {
 			loadField();
@@ -243,8 +289,8 @@
 				}
 			}
 		}
-		var maxX = selected['object'].object.width + maxDeltaX;
-		var maxY = selected['object'].object.height + maxDeltaY;
+		var maxX = selected['object'].object.width;
+		var maxY = selected['object'].object.height;
 		
 		if (Math.abs(deltaX) > maxX) {
 			if (deltaX > 0) {
@@ -404,6 +450,7 @@
 			
 			var playingnow = false;
 			var playPhase = 0;
+      
 			do {
 				while(findShape()); 
 				playPhase++;
@@ -415,6 +462,26 @@
 							queue.push(['bomb', i, j]);
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
 							queue.push(['newItem', i, j]);
+							//console.log('destroy: ' + i + ',' + j);
+							queue.push(['bomb', itemwidth * j, itemheight * i]);
+							map[i][j].object.destroy();
+							map[i][j] = 'Removed!';
+							if (playingnow == false) {
+								var music = game.add.audio('fireworks');
+								music.play();
+								playingnow = true;
+							}
+							//console.log(i + ',' + j);
+						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
+							var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
+							effect.animations.add('destroy');
+							effect.animations.play('destroy', 60, false, true);
+							
+							map[i][j].object.destroy();
+							map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
+							map[i][j].object.width = itemwidth - marginw*2;
+							map[i][j].object.height = itemheight - marginh*2;
+							map[i][j]['type'] = 'other';
 						} else {
 							//console.log('other ' + i + ',' + j);
 						}
@@ -426,6 +493,28 @@
 					var tmp = animationlist[i];
 					if (tmp[0] == 'move') {
 						queue.push(['move', height-tmp[1]-1, tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
+						map[height-tmp[3]-1][tmp[4]] = map[height-tmp[1]-1][tmp[2]];
+						//map[height-tmp[3]-1][tmp[2]].object.tint = 8000000;
+							
+						/*game.add.tween(map[height-tmp[3]-1][tmp[2]].object).to({
+							x: itemwidth * (tmp[4]) + marginw,
+							y: itemheight * (height-tmp[3]-1) + marginh
+						}, 500, Phaser.Easing.Back.Out, true);*/
+						queue.push(['move', map[height-tmp[3]-1][tmp[2]].object, itemwidth * (tmp[4]) + marginw, itemheight * (height-tmp[3]-1) + marginh]);
+						//console.log(height-tmp[3]-1);
+						/*map[height-tmp[3]-1][tmp[4]].object.x = itemwidth * (tmp[4]) + marginw;*/
+						
+						//map[height-tmp[3]-1][tmp[4]].object.y = itemheight * (height-tmp[3]-1) + marginh;
+
+						//console.log("moved :" + (height-tmp[1]-1) + ',' + tmp[2] + ' to ' + (height-tmp[3]-1) + ',' + tmp[4]);
+					} else if (tmp[0] == 'newShape') {
+						map[height-tmp[3]-1][tmp[4]] = new item(tmp[1], tmp[2]);
+						map[height-tmp[3]-1][tmp[4]].object = game.add.sprite(itemwidth * tmp[4] + marginw, 0, "item_" + theme + "_" + tmp[2]);
+						map[height-tmp[3]-1][tmp[4]].object.width = itemwidth - marginw*2;
+						map[height-tmp[3]-1][tmp[4]].object.height = itemheight - marginh*2;
+						game.add.tween(map[height-tmp[3]-1][tmp[4]].object).to({
+							y: itemheight * (height-tmp[3]-1) + marginh
+						}, 500, Phaser.Easing.Back.Out, true);
 					}
 				}
 				for (var i in animationlist) {
@@ -540,6 +629,19 @@
 					console.log(e);
 						clearInterval(interval);	
 //					clearInterval(interval);
+					if (queue[0][0] == 'move') {
+						game.add.tween(queue[0][1]).to({
+							x: queue[0][2],
+							y: queue[0][3]
+						}, 500, Phaser.Easing.Back.Out, true);
+					} else if (queue[0][0] == 'bomb') {
+						var effect = game.add.sprite(queue[0][1], queue[0][2], 'effect');
+						effect.animations.add('destroy');
+						effect.animations.play('destroy', 180, false, true);
+					}
+					queue.shift();
+				} catch (e) {
+					clearInterval(interval);
 				}
 			}, 50);
 			
@@ -1011,11 +1113,222 @@
 
 
 </script>
+<script>
+	var line = 0;
+
+	var bet = 0;
+
+	function line_minus(){
+		line = line - 1;
+		if (line < 0){
+			line = 0;
+		}
+		document.getElementById("field_line").innerHTML = 'LINE: ' + line;  
+		update_total_bet();
+	}
+
+
+
+	function line_multiply(){
+		line = line + 1;
+		document.getElementById("field_line").innerHTML = 'LINE: ' + line;
+		update_total_bet();
+	}
+
+
+
+	function bet_minus(){
+		bet = bet - 1;
+		if (bet < 0){
+			bet = 0;
+		}
+		document.getElementById("field_bet").innerHTML = 'BET: ' + bet;
+		update_total_bet();
+	}
+
+
+
+	function bet_plus(){
+		bet = bet + 1;
+		document.getElementById("field_bet").innerHTML = 'BET: ' + bet;
+		update_total_bet();
+	}
+
+
+
+	function update_total_bet(){
+		var line_text = document.getElementById("field_line").textContent;
+		var bet_text = document.getElementById("field_bet").textContent;
+		var line_int;
+		var bet_int;
+
+		if (parseInt(line_text)){
+			line_int = parseInt(line_text);
+		} else {
+			line_int = 0;
+		}
+
+		if (parseInt(bet_text)){
+			bet_int = parseInt(bet_text);
+		} else {
+			bet_int = 0;
+		}
+
+		var total_bet;
+		if (line_int == 0 || bet_int == 0){
+			total_bet = 0;
+		} else {
+			total_bet = line_int * bet_int;
+		}
+		document.getElementById("field_total").innerHTML = 'TOTAL: ' + total_bet;
+		var music = game.add.audio('coin');
+		music.play();
+	}
+
+	function auto(){
+		console.log("auto");
+	}
+
+	function gamble(){
+		console.log("gamble");
+	}
+
+	function collect(){
+		console.log("collect");
+	}
+</script>
+
+<script>
+	var width_bonusgame = 800, height_bonusgame = 600;
+	var bonusgame = new Phaser.Game(width_bonusgame, height_bonusgame, Phaser.AUTO, document.getElementById("bonusgame"), { preload: preload, create: create, update: update });
+	var timer = 0;
+	var total = 0;
+	var isPlayingBgm=false;
+
+	var spaces=['space_1','space_2','space_3','space_4','space_5'];
+	var i;
+	var pos = [-100,-80,-60,-40,-20];
+	var count = 0;
+
+	function preload() {
+
+		for (i=0; i<5; i++){
+			var temp = spaces[i];
+			bonusgame.load.spritesheet(temp,temp + ".png");
+		}
+		bonusgame.load.spritesheet('effect','effect.png',128,128);
+		bonusgame.load.audio('bonus_background','bonus_background.mp3');
+		bonusgame.load.audio('bonus_pick','bonus_pick.mp3');
+
+		bonusgame.load.image('space', 'space.jpg');
+
+	}
+
+	function create() {
+
+		text = bonusgame.add.text(16, 16, 'Click a sprite', { fill: '#ffffff' });
+		timer = bonusgame.time.now;
+		endTime = bonusgame.time.now + 5*1000;
+
+		var background = bonusgame.add.sprite(0, 0, 'space');
+		background.scale.setTo(1.5,1.5);
+		background.addChild(text)
+
+	}
+
+	function releaseTargets() {
+
+			var temp = spaces[0|Math.random() * 5];
+			var icon = bonusgame.add.sprite(-100, bonusgame.world.randomY, temp);
+			icon.inputEnabled = true;
+			icon.events.onInputDown.add(clicked,this);
+			bonusgame.add.tween(icon).to({ x: bonusgame.width + (1600 + icon.x), y: bonusgame.world.randomY}, 5000, Phaser.Easing.Linear.None, true);
+
+	}
+
+	function update() {
+		if(bonusgame.time.now<endTime) {
+			if(!isPlayingBgm)
+			{
+				var sound=new Phaser.Sound(bonusgame,'bonus_background');
+				if(sound.isDecoded)
+				{
+					sound.play();
+					console.log(sound);
+					isPlayingBgm=true;
+				}
+			}
+
+			if (bonusgame.time.now > timer)
+			{
+				timer=timer+250;
+				releaseTargets();
+				updateText();
+			}
+		}
+		else closeBonusGame();
+	}
+
+	function closeBonusGame() {
+		// Bonus Game Should be close in here
+		console.log("Bonus Game Should be close in here");
+	}
+
+	function clicked(sprite) {
+
+		var effect = bonusgame.add.sprite(sprite.x+sprite.width/2-64, sprite.y+sprite.height/2-64, 'effect');
+
+		effect.animations.add('explode');
+		effect.animations.play('explode', 30, false, true);
+
+		var sound=new Phaser.Sound(bonusgame,'bonus_pick');
+		sound.play();
+
+		sprite.destroy();
+
+		count++;
+	}
+
+	function updateText() {
+
+
+		text.setText("You have clicked " + count + " times !");
+
+	}
+</script>
 </head>
 <body>
 <div id="background"></div>
 <div id="mask"></div>
 <div id="game"></div>
-<div id="control"></div>
+<div id="control">
+	<div id="wrap_line">
+	<div class="value" id="field_line" style="color: white; font-size: 2.0em;">LINE: 0</div>
+	<img src="resources/ui/bt_minus.png" alt="bt_minus_line" width="42" height="42" onclick="line_minus()" style="display: inline">
+	<img src="resources/ui/bt_multiply.png" alt="bt_multiply_line" width="42" height="42" onclick="line_multiply()">
+	</div>
+
+	<div id="wrap_bet">
+	<div class="value" id="field_bet" style="color:white; font-size:2.0em;">BET: 0</div>
+	<img src="resources/ui/bt_minus.png" alt="bt_minus_bet" width="42" height="42" onclick="bet_minus()">
+	<img src="resources/ui/bt_plus.png" alt="bt_plus_bet" width="42" height="42" onclick="bet_plus()">
+	</div>
+
+	<div id="wrap_total_win">
+	<div class="value" id="field_total" style="color:white; font-size:2.0em;">TOTAL: 0</div>
+	<div class="value" id="field_win" style="color:white; font-size:2.0em;">WIN</div>
+	</div>
+
+	<div id="wrap_collect">
+	<img src="resources/ui/bt_collect.png" alt="bt_collect" height="84" onclick="collect()">
+	</div>
+
+	<div id="wrap_auto_gamble">
+	<img src="resources/ui/bt_auto.png" alt="bt_auto" height="42" onclick="auto()"><br>
+	<img src="resources/ui/bt_gamble.png" alt="bt_gamble" height="42" onclick="gamble()">
+	</div>
+
+</div>
+<div id="bonusgame"></div>
 </body>
 </html>
