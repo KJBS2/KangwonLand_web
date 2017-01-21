@@ -9,6 +9,7 @@
 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <script src="phaser.min.js"></script>
 <link href="https://fonts.googleapis.com/css?family=Noto+Sans" rel="stylesheet">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 <style type="text/css">
 	#game {
 		transform: perspective(600px) rotateX(35deg) scaleX(0.8) scaleY(0.7) rotateY(0deg);
@@ -93,6 +94,28 @@
 		top: calc((768 - 600) / 2);
 		z-index: 600;
 	}
+	.vertical {
+		transform: rotate(-90deg);
+	}
+	.time {
+		position: absolute;
+		right: -60px;
+		top: 120px;
+		width: 200px;
+	}
+	#jackpot {
+		background-image: url('resources/effects/jackpot.png');
+		background-size: contain;
+		background-repeat: no-repeat;
+		position: absolute;
+		top: 230px;
+		left: 150px;
+		width: 70vw;
+		height: 300px;
+		transition: opacity 0.5s ease-in-out;
+		opacity: 0;
+		display: none;
+	}
 </style>
 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <script>
@@ -106,17 +129,19 @@
 	var themes_img = ['amazon.jpg', 'desert.jpg', 'space.jpg'];
 	var themes_bottom_img = ['amazon_bottom.jpg', 'desert_bottom.jpg', 'space_bottom.jpg'];
 	var themes_highlight_img = ['amazon_highlight.jpg', 'desert_highlight.jpg', 'space_highlight.jpg'];
-	var themes_special_img = ['special_amazon.png', 'special_desert.png', 'special_space.png'];
+	var special_img = ['special_amazon.png', 'special_desert.png', 'special_space.png', 'special_box.png'];
 	var bgm_main = ['resources/bgm/bgm.mp3'];
 	var effect_audio = ['resources/effects/fireworks.wav'];
 	var swap_audio = ['resources/effects/swap.wav'];
 	var coin_audio = ['resources/effects/coin.wav'];
+	var jackpot_audio = ['resources/effects/jackpot.wav'];
 	
 	var widthpx = 780, heightpx = 1100;
 	//var widthpx = window.innerWidth, heightpx = window.innerHeight;
 	var marginw = -10, marginh = -10;
 	var theme_change = 1;
 	var maxDeltaX = 80, maxDeltaY = 80;
+	var timemax = 30;
 	
 	//============================================================
 
@@ -132,6 +157,9 @@
 	var Shape;
 	var degnow = 0;
 	var canclick = true;
+	
+	var timenow = 0;
+	var int_progress;
 	
 	var item = function(type, num) {
 		if (type == null && num == null) {
@@ -166,13 +194,16 @@
 				game.load.image("background_" + i, "resources/background/" + themes_img[i]);
 				game.load.image("background_bottom_" + i, "resources/background/" + themes_bottom_img[i]);
 				game.load.image("background_highlight_" + i, "resources/background/" + themes_highlight_img[i]);
-				game.load.image("special_" + i, "resources/items/" + themes_special_img[i]);
+			}
+			for(var i in special_img) {
+				game.load.image("special_" + i, "resources/items/" + special_img[i]);
 			}
 			game.load.spritesheet('effect', 'resources/effects/effect.png', 128, 128);
 			game.load.audio('bgm', bgm_main);
 			game.load.audio('fireworks', effect_audio);
 			game.load.audio('swap', swap_audio);
 			game.load.audio('coin', coin_audio);
+			game.load.audio('jackpot', jackpot_audio);
 		},
 		create: function() {
 			loadField();
@@ -227,6 +258,16 @@
 				//items.add(tmp);
 			}
 		}
+		timenow = timemax;
+		document.getElementById('progress').setAttribute('style', 'width: 100%');
+		int_progress = setInterval(function() {
+			timenow = timenow - 1;
+			document.getElementById('progress').setAttribute('style', 'width: ' + parseInt(timenow/timemax*100) + '%');
+			if (timenow == 0) {
+				//TODO: time over
+				clearInterval(int_progress);
+			}
+		}, 1000);
 		//console.log(map);
 	};
 	
@@ -458,6 +499,8 @@
 			var playPhase = 0;
 			var jackpotValue = getRandom(3); 
 			console.log(jackpotValue);
+			
+			clearInterval(int_progress);
 
 			do {
 				while(findShape()); 
@@ -533,7 +576,17 @@
 			var interval = setInterval(function() {
 				try {
 					if (queue.length == 0) {
-						clearInterval(interval);	
+						clearInterval(interval);
+						timenow = timemax;
+						document.getElementById('progress').setAttribute('style', 'width: 100%');
+						int_progress = setInterval(function() {
+							timenow = timenow - 1;
+							document.getElementById('progress').setAttribute('style', 'width: ' + parseInt(timenow/timemax*100) + '%');
+							if (timenow == 0) {
+								//TODO: time over
+								clearInterval(int_progress);
+							}
+						}, 1000);
 						if (game.rnd.between(0, theme_change) == 0) {
 							var newtheme = game.rnd.between(0, 2);
 
@@ -583,7 +636,16 @@
 								}, 250);
 							}
 						}
-					}else if (queue[0][0] == 'move') {
+						if (isJackpot()) {
+							var music = game.add.audio('jackpot');
+							music.play();
+							
+							document.getElementById("jackpot").style.display = 'block';
+							document.getElementById("jackpot").style.opacity = '1';
+							
+							
+						}
+					} else if (queue[0][0] == 'move') {
 //						queue.push(['move', height-tmp[1]-1, tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
 						var nowPhase;
 						do{
@@ -618,8 +680,7 @@
 						music.play();
 						
 						queue.shift();
-					}else if(queue[0][0] == 'newItem')
-					{
+					} else if(queue[0][0] == 'newItem') {
 //						queue.push(['newItem', i, j]);
 						var i = queue[0][1], j = queue[0][2];
 
@@ -633,8 +694,7 @@
 						map[i][j].object.height = itemheight - marginh*2;
 						map[i][j]['type'] = 'other';
 						queue.shift();
-					}else if(queue[0][0] == 'newShape')
-					{
+					} else if(queue[0][0] == 'newShape') {
 //						queue.push(['newShape', tmp[1], tmp[2], height-tmp[3]-1, tmp[4]]);
 						var nowPhase;
 						do{
@@ -1346,7 +1406,11 @@
 </head>
 <body>
 <div id="background"></div>
-<div id="mask"></div>
+<div id="mask">
+	<div class="progress vertical time">
+		<div class="progress-bar progress-bar-info" id="progress" style="width: 100%;"></div>  
+	</div>
+</div>
 <div id="game"></div>
 <div id="control"></div>
 <div id="control">
@@ -1378,5 +1442,6 @@
 
 </div>
 <div id="bonusgame"></div>
+<div id="jackpot"></div>
 </body>
 </html>
