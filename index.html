@@ -448,13 +448,16 @@
 			
 			var playingnow = false;
 			var playPhase = 0;
+			var jackpotValue = getRandom(3); 
+			console.log(jackpotValue);
 			do {
 				while(findShape()); 
 				playPhase++;
 
 				//TODO: animation;
-				for (var i in map) {
-					for (var j in map[i]) {
+				for (var k in map) {
+					for (var j in map[k]) {
+						var i = height-k-1;
 						if (Shape[height-i-1][j]['num'] == '*') {
 							queue.push(['bomb', i, j]);
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
@@ -480,10 +483,13 @@
 				}
 				
 
-                useItem();
 				playPhase++;
-				for (var i in map) {
-					for (var j in map[i]) {
+                useItem();
+				if(jackpotValue == 0 && playPhase >= 3)
+                	letsMakeJackpotBefore();
+				for (var k in map) {
+					for (var j in map[k]) {
+						var i = height-k-1;
 						if (Shape[height-i-1][j]['num'] == '*') {
 							queue.push(['bomb', i, j]);
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
@@ -493,7 +499,10 @@
 						}
 					}
 				}
-                animationlist = upShape();
+				if(jackpotValue == 0 && playPhase >= 3)
+                	animationlist = letsMakeJackpotAfter();
+                else
+	                animationlist = upShape();
 				for (var i in animationlist) {
 					var tmp = animationlist[i];
 					if (tmp[0] == 'move') {
@@ -506,6 +515,7 @@
 						queue.push(['newShape', tmp[1], tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
 					}
 				}
+                if(isJackpot()) break;
 				if(playPhase > 6 && judgeHaveMatching(3, Width)) break;
 
 
@@ -1056,7 +1066,97 @@
 		Shape[sp0[0]][sp0[1]] = Shape[sp1[0]][sp1[1]];
 //		map[mp0[0]][mp0[1]] = map[mp1[0]][mp1[1]];
 	}
+	function isJackpot()
+	{
+		var tp = Shape[3][0].type, nu = Shape[3][0].num;
+		if(tp == 'other') return false;
+		var isSame = true;
+		for(var j=0; j<Width; j++)
+			if(Shape[3][0].equals(Shape[3][j]) == false) {isSame = false; break;}
+		return isSame;
+	}
 
+
+
+    function letsMakeJackpotBefore()
+    {
+        var virtual = initShapeWithValue(Height, Width);
+        for(var j=0; j<Width; j++) {
+            var newIx = 0;
+            for(var i=0; i<Height; i++) {
+                if(Shape[i][j].num != '*') {
+                    virtual[newIx][j] = Shape[i][j];
+                    newIx++;
+                }
+            }
+            for(var i=newIx; i<Height; i++) {
+                virtual[i][j] = new item('other', '*');
+            }
+        }
+        var cnt = new Array(getRandom(ShapeType));
+        for(var i=0; i<ShapeType; i++) cnt[i] = 0;
+
+        for(var j=0; j<Width; j++)
+            if(virtual[3][j].type == 'standard')
+                cnt[virtual[3][j].num]++;
+        console.log("before");
+        console.log(cnt);
+        var maxIx = 0;
+        for(var i=1; i<ShapeType; i++)
+            if(cnt[maxIx] < cnt[i])
+                maxIx = i;
+
+        for(var j=0; j<Width; j++) 
+        {
+            if(virtual[3][j].type == 'other') continue;
+            if(virtual[3][j].num == maxIx) continue;
+            for(var i=0; i<Height; i++)
+                changeShape(i, j, 'other', '*');
+        }
+    }
+    function letsMakeJackpotAfter()
+    {
+        var movementList = [];
+        for(var j=0; j<Width; j++) {
+            var newIx = 0;
+            for(var i=0; i<Height; i++) {
+                if(Shape[i][j].num != '*') {
+                    if(i != newIx)
+                        movementList.push(['move', i, j, newIx, j])
+                    //(i, j) -> (newIx, j);
+
+                    substituteShapeWithMap([newIx, j], [i, j]);
+                    newIx++;    
+                }
+            }
+            for(var i=newIx; i<Height; i++) {
+                Shape[i][j] = new item('other', '*');
+            }
+        }
+
+        var cnt = new Array(getRandom(ShapeType));
+        for(var i=0; i<ShapeType; i++) cnt[i] = 0;
+
+        for(var j=0; j<Width; j++)
+            if(Shape[3][j].type == 'standard')
+                cnt[Shape[3][j].num]++;
+        var maxIx = 0;
+        for(var i=1; i<ShapeType; i++)
+            if(cnt[maxIx] < cnt[i])
+                maxIx = i;
+        console.log("after");
+        console.log(cnt);
+        for(var j=0; j<Width; j++) {
+            for(var i=0; i<Height; i++) {
+                if(Shape[i][j].equals(new item('other', '*')) == false) continue;
+                Shape[i][j] = newRandomShape();
+                if(i == 3) Shape[i][j] = new item('standard', maxIx);
+                movementList.push(['newShape', Shape[i][j].type, Shape[i][j].num, i, j]);
+                //Shape(type, num) -> (i, j)
+            }
+        }
+        return movementList;
+    }
 
 </script>
 <script>
