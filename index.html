@@ -43,6 +43,7 @@
 		margin: 0;
 		background-color: black;
 		font-family: 'Noto Sans', sans-serif;
+		overflow: hidden;
 	}
 	#background {
 		position: fixed;
@@ -113,7 +114,7 @@
 	
 	var widthpx = 780, heightpx = 1100;
 	//var widthpx = window.innerWidth, heightpx = window.innerHeight;
-	var marginw = 10, marginh = 10;
+	var marginw = -10, marginh = -10;
 	var theme_change = 1;
 	var maxDeltaX = 80, maxDeltaY = 80;
 	
@@ -130,6 +131,7 @@
 	var changing = null;
 	var Shape;
 	var degnow = 0;
+	var canclick = true;
 	
 	var item = function(type, num) {
 		if (type == null && num == null) {
@@ -205,13 +207,13 @@
 		//====================
 		
 		items = game.add.group();
-		if (theme == 2) {
+		/*if (theme == 2) {
 			marginw = -10;
 			marginh = -10;
 		} else {
 			marginw = 10;
 			marginh = 10;
-		}
+		}*/
 		for (var i = 0; i < height; i++) {
 			map.push([]);
 			for(var j = 0; j < width; j++) {
@@ -230,6 +232,8 @@
 	
 	var itemselect = function(e) {
 		//e.preventDefault();
+		if (!canclick) return false;
+		
 		var x = 0 | (e.clientX - 90) / ((945-90)/width);
 		var y = 0 | (e.clientY - 347) / ((645-347)/3);
 		if (y < 0 || y >= 3 || x < 0 || x >= width || e.clientY < 347) {
@@ -269,6 +273,8 @@
 	var itemmove = function(e) {
 		//e.preventDefault();
 		//console.log("test");
+		if (!canclick) return false;
+			
 		var deltaX = e.clientX - selected['startx'];
 		var deltaY = e.clientY - selected['starty'];
 		var maxDelta = selected['object'].object.width*10;
@@ -414,6 +420,8 @@
 		//selected['object'].object.y += 10;
 		//selected['object'].object.width -= 20;
 		//selected['object'].object.height -= 20;
+		if (!canclick) return false;
+		canclick = false;
 		
 		if (changing != null && isSwappable([height-selected['y']-1, selected['x']], [height-changing['y']-1, changing['x']])) {
 			game.add.tween(selected['object'].object).to({
@@ -448,13 +456,17 @@
 			
 			var playingnow = false;
 			var playPhase = 0;
+			var jackpotValue = getRandom(3); 
+			console.log(jackpotValue);
+
 			do {
 				while(findShape()); 
 				playPhase++;
 
 				//TODO: animation;
-				for (var i in map) {
-					for (var j in map[i]) {
+				for (var k in map) {
+					for (var j in map[k]) {
+						var i = height-k-1;
 						if (Shape[height-i-1][j]['num'] == '*') {
 							queue.push(['bomb', i, j]);
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
@@ -482,8 +494,11 @@
 
                 useItem();
 				playPhase++;
-				for (var i in map) {
-					for (var j in map[i]) {
+				if(jackpotValue == 0 && playPhase >= 3)
+                	letsMakeJackpotBefore();
+				for (var k in map) {
+					for (var j in map[k]) {
+						var i = height-k-1;
 						if (Shape[height-i-1][j]['num'] == '*') {
 							queue.push(['bomb', i, j]);
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
@@ -493,7 +508,10 @@
 						}
 					}
 				}
-                animationlist = upShape();
+                if(jackpotValue == 0 && playPhase >= 3)
+                	animationlist = letsMakeJackpotAfter();
+                else
+	                animationlist = upShape();
 				for (var i in animationlist) {
 					var tmp = animationlist[i];
 					if (tmp[0] == 'move') {
@@ -506,6 +524,7 @@
 						queue.push(['newShape', tmp[1], tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
 					}
 				}
+				if(isJackpot()) break;
 				if(playPhase > 6 && judgeHaveMatching(3, Width)) break;
 
 
@@ -514,7 +533,56 @@
 			var interval = setInterval(function() {
 				try {
 					if (queue.length == 0) {
-						clearInterval(interval);		
+						clearInterval(interval);	
+						if (game.rnd.between(0, theme_change) == 0) {
+							var newtheme = game.rnd.between(0, 2);
+
+							if (newtheme != theme) {
+								theme = newtheme;
+								degnow += 360;
+								degnow %= 720;
+								$('#game').css('transform', 'perspective(600px) rotateX(35deg) scaleX(0.8) scaleY(0.7) rotateY(' + degnow + 'deg)');
+
+								/*if (theme == 2) {
+									marginw = -10;
+									marginh = -10;
+								} else {
+									marginw = 10;
+									marginh = 10;
+								}*/
+
+								background = game.add.group();
+
+								$("#background").css('background-image', 'url("resources/background/' + themes_img[theme] + '")');
+
+
+								setTimeout(function() {
+									var tmp;
+
+									tmp = game.add.sprite(0, itemheight * (height-4), "background_highlight_" + theme);
+									tmp.width = widthpx;
+									background.add(tmp);
+
+									tmp = game.add.sprite(0, itemheight * (height-3), "background_bottom_" + theme);
+									tmp.width = widthpx;
+									tmp.height = widthpx; //set height same as width
+									background.add(tmp);
+									for (var i = 0; i < height; i++) {
+										for(var j = 0; j < width; j++) {
+											map[i][j].object.destroy();
+											if (map[i][j]['type'] == 'standard') {
+												map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "item_" + theme + "_" + map[i][j]['num']);
+											} else {
+												map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
+											}
+											map[i][j].object.width = itemwidth - marginw*2;
+											map[i][j].object.height = itemheight - marginh*2;
+											//items.add(tmp);
+										}
+									}
+								}, 250);
+							}
+						}
 					}else if (queue[0][0] == 'move') {
 //						queue.push(['move', height-tmp[1]-1, tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
 						var nowPhase;
@@ -542,9 +610,9 @@
 						}
 						*/
 
-						var effect = game.add.sprite(itemwidth * j, itemheight * i, 'effect');
+						var effect = game.add.sprite(itemwidth * (j) - 16, itemheight * (i) - 16, 'effect');
 						effect.animations.add('destroy');
-						effect.animations.play('destroy', 360, false, true);
+						effect.animations.play('destroy', 180, false, true);
 						
 						var music = game.add.audio('fireworks');
 						music.play();
@@ -557,7 +625,7 @@
 
 						var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
 						effect.animations.add('destroy');
-						effect.animations.play('destroy', 360, false, true);
+						effect.animations.play('destroy', 180, false, true);
 						
 						map[i][j].object.destroy();
 						map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
@@ -586,60 +654,12 @@
 					}
 				} catch (e) {
 					console.log(e);
-						clearInterval(interval);	
+					clearInterval(interval);	
+					
 //					clearInterval(interval);
 				}
 			}, 50);
 			
-			if (game.rnd.between(0, theme_change+100) == 0) {
-				var newtheme = game.rnd.between(0, 2);
-				
-				if (newtheme != theme) {
-					theme = newtheme;
-					degnow += 720;
-					degnow %= 1440;
-					$('#game').css('transform', 'perspective(600px) rotateX(35deg) scaleX(0.8) scaleY(0.7) rotateY(' + degnow + 'deg)');
-
-					if (theme == 2) {
-						marginw = -10;
-						marginh = -10;
-					} else {
-						marginw = 10;
-						marginh = 10;
-					}
-
-					background = game.add.group();
-
-					$("#background").css('background-image', 'url("resources/background/' + themes_img[theme] + '")');
-
-
-					setTimeout(function() {
-						var tmp;
-
-						tmp = game.add.sprite(0, itemheight * (height-4), "background_highlight_" + theme);
-						tmp.width = widthpx;
-						background.add(tmp);
-
-						tmp = game.add.sprite(0, itemheight * (height-3), "background_bottom_" + theme);
-						tmp.width = widthpx;
-						tmp.height = widthpx; //set height same as width
-						background.add(tmp);
-						for (var i = 0; i < height; i++) {
-							for(var j = 0; j < width; j++) {
-								map[i][j].object.destroy();
-								if (map[i][j]['type'] == 'standard') {
-									map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "item_" + theme + "_" + map[i][j]['num']);
-								} else {
-									map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
-								}
-								map[i][j].object.width = itemwidth - marginw*2;
-								map[i][j].object.height = itemheight - marginh*2;
-								//items.add(tmp);
-							}
-						}
-					}, 250);
-				}
-			}
 			
 			//console.log(Shape);
 			//console.log(map);
@@ -671,7 +691,7 @@
 				changing = null;
 			}
 		}
-		
+		canclick = true;
 		selected = null;
 		game.input.deleteMoveCallback(itemmove);
 	}
@@ -1056,6 +1076,95 @@
 		Shape[sp0[0]][sp0[1]] = Shape[sp1[0]][sp1[1]];
 //		map[mp0[0]][mp0[1]] = map[mp1[0]][mp1[1]];
 	}
+	
+	function isJackpot() {
+		var tp = Shape[3][0].type, nu = Shape[3][0].num;
+		if(tp == 'other') return false;
+		var isSame = true;
+		for(var j=0; j<Width; j++)
+			if(Shape[3][0].equals(Shape[3][j]) == false) {isSame = false; break;}
+		return isSame;
+	}
+
+
+
+		function letsMakeJackpotBefore() {
+				var virtual = initShapeWithValue(Height, Width);
+				for(var j=0; j<Width; j++) {
+						var newIx = 0;
+						for(var i=0; i<Height; i++) {
+								if(Shape[i][j].num != '*') {
+										virtual[newIx][j] = Shape[i][j];
+										newIx++;
+								}
+						}
+						for(var i=newIx; i<Height; i++) {
+								virtual[i][j] = new item('other', '*');
+						}
+				}
+				var cnt = new Array(getRandom(ShapeType));
+				for(var i=0; i<ShapeType; i++) cnt[i] = 0;
+
+				for(var j=0; j<Width; j++)
+						if(virtual[3][j].type == 'standard')
+								cnt[virtual[3][j].num]++;
+				console.log("before");
+				console.log(cnt);
+				var maxIx = 0;
+				for(var i=1; i<ShapeType; i++)
+						if(cnt[maxIx] < cnt[i])
+								maxIx = i;
+
+				for(var j=0; j<Width; j++) 
+				{
+						if(virtual[3][j].type == 'other') continue;
+						if(virtual[3][j].num == maxIx) continue;
+						for(var i=0; i<Height; i++)
+								changeShape(i, j, 'other', '*');
+				}
+		}
+		function letsMakeJackpotAfter() {
+				var movementList = [];
+				for(var j=0; j<Width; j++) {
+						var newIx = 0;
+						for(var i=0; i<Height; i++) {
+								if(Shape[i][j].num != '*') {
+										if(i != newIx)
+												movementList.push(['move', i, j, newIx, j])
+										//(i, j) -> (newIx, j);
+
+										substituteShapeWithMap([newIx, j], [i, j]);
+										newIx++;		
+								}
+						}
+						for(var i=newIx; i<Height; i++) {
+								Shape[i][j] = new item('other', '*');
+						}
+				}
+	
+				var cnt = new Array(getRandom(ShapeType));
+				for(var i=0; i<ShapeType; i++) cnt[i] = 0;
+
+				for(var j=0; j<Width; j++)
+						if(Shape[3][j].type == 'standard')
+								cnt[Shape[3][j].num]++;
+				var maxIx = 0;
+				for(var i=1; i<ShapeType; i++)
+						if(cnt[maxIx] < cnt[i])
+								maxIx = i;
+				console.log("after");
+				console.log(cnt);
+				for(var j=0; j<Width; j++) {
+						for(var i=0; i<Height; i++) {
+								if(Shape[i][j].equals(new item('other', '*')) == false) continue;
+								Shape[i][j] = newRandomShape();
+								if(i == 3) Shape[i][j] = new item('standard', maxIx);
+								movementList.push(['newShape', Shape[i][j].type, Shape[i][j].num, i, j]);
+								//Shape(type, num) -> (i, j)
+						}
+				}
+				return movementList;
+		}
 
 
 </script>
@@ -1108,17 +1217,9 @@
 		var line_int;
 		var bet_int;
 
-		if (parseInt(line_text)){
-			line_int = parseInt(line_text);
-		} else {
-			line_int = 0;
-		}
+		line_int = parseInt(line_text.split(': ')[1]);
 
-		if (parseInt(bet_text)){
-			bet_int = parseInt(bet_text);
-		} else {
-			bet_int = 0;
-		}
+		bet_int = parseInt(bet_text.split(': ')[1]);
 
 		var total_bet;
 		if (line_int == 0 || bet_int == 0){
