@@ -373,7 +373,12 @@
 				isInOtherObject = 3;
 			}
 		}
+		if(changing == null && isInOtherObject != -1)
+		{
+			var music = game.add.audio('swap');
+			music.play();
 
+		}
 		if (changing != null && isInOtherObject != changing['where']) {
 			var music = game.add.audio('swap');
 			music.play();
@@ -383,6 +388,7 @@
 			}, 500, Phaser.Easing.Back.Out, true);
 			changing = null;
 		}
+		isInOtherObject = false;
 
 
 		if (Math.abs(deltaX) > selected['object'].object.width - maxDeltaX) {
@@ -498,6 +504,7 @@
 			var playingnow = false;
 			var playPhase = 0;
 			var jackpotValue = getRandom(3); 
+			var bombCnt = 0;
 			console.log(jackpotValue);
 			
 			clearInterval(int_progress);
@@ -512,6 +519,7 @@
 						var i = height-k-1;
 						if (Shape[height-i-1][j]['num'] == '*') {
 							queue.push(['bomb', i, j]);
+							bombCnt++;
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
 							queue.push(['newItem', i, j]);
 						} else {
@@ -544,6 +552,7 @@
 						var i = height-k-1;
 						if (Shape[height-i-1][j]['num'] == '*') {
 							queue.push(['bomb', i, j]);
+							bombCnt++;
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
 							queue.push(['newItem', i, j]);
 						} else {
@@ -568,14 +577,15 @@
 					}
 				}
 				if(isJackpot()) break;
-				if(playPhase > 6 && judgeHaveMatching(3, Width)) break;
-
-
-			} while (findShape());
+				if(bombCnt > 80) break;
+//				if(playPhase > 6 && judgeHaveMatching(3, Width)) break;
+			} while (true);
 			
 			var interval = setInterval(function() {
 				try {
+					canclick = false;
 					if (queue.length == 0) {
+						canclick = true;
 						clearInterval(interval);
 						timenow = timemax;
 						document.getElementById('progress').setAttribute('style', 'width: 100%');
@@ -587,22 +597,57 @@
 								clearInterval(int_progress);
 							}
 						}, 1000);
-						if (game.rnd.between(0, theme_change) == 0) {
-							var newtheme = game.rnd.between(0, 2);
+
+
+						document.getElementById("field_win").innerHTML = 'WIN : ' + getScore();
+						var music = game.add.audio('coin');
+						music.play();
+
+						var randValue = game.rnd.between(0, theme_change);
+						if(judgeHaveMatching(3, Width) || isHaveAnswer() == false) randValue = 0;
+
+						if (isJackpot()) {
+							var music = game.add.audio('jackpot');
+							music.play();
+							
+							document.getElementById("jackpot").style.display = 'block';
+							document.getElementById("jackpot").style.opacity = '1';
+							
+						}else if (randValue == 0) {
+							var newtheme = (theme + game.rnd.between(1, 2)) % 3;
 
 							if (newtheme != theme) {
+
+								//=====Initialize map=====
+								initShapeWithNoMatchingAndHaveAnswer(height, width);
+								console.log("Map created");
+								//====================
+								
+								for (var i = 0; i < height; i++) {
+									for(var j = 0; j < width; j++) {
+										map[i][j].object.destroy();
+									}
+								}
+								items = game.add.group();
+								map = [];
+								for (var i = 0; i < height; i++) {
+									map.push([]);
+									for(var j = 0; j < width; j++) {
+										var tmp = new item();
+										tmp.num = Shape[height-i-1][j]['num'];
+										tmp.object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "item_" + theme + "_" + tmp.num);
+										tmp.object.width = itemwidth - marginw*2;
+										tmp.object.height = itemheight - marginh*2;
+										
+										map[i].push(tmp);
+										//items.add(tmp);
+									}
+								}
+
 								theme = newtheme;
 								degnow += 360;
 								degnow %= 720;
 								$('#game').css('transform', 'perspective(600px) rotateX(35deg) scaleX(0.8) scaleY(0.7) rotateY(' + degnow + 'deg)');
-
-								/*if (theme == 2) {
-									marginw = -10;
-									marginh = -10;
-								} else {
-									marginw = 10;
-									marginh = 10;
-								}*/
 
 								background = game.add.group();
 
@@ -636,15 +681,6 @@
 								}, 250);
 							}
 						}
-						if (isJackpot()) {
-							var music = game.add.audio('jackpot');
-							music.play();
-							
-							document.getElementById("jackpot").style.display = 'block';
-							document.getElementById("jackpot").style.opacity = '1';
-							
-							
-						}
 					} else if (queue[0][0] == 'move') {
 //						queue.push(['move', height-tmp[1]-1, tmp[2], height-tmp[3]-1, tmp[4], playPhase]);
 						var nowPhase;
@@ -656,7 +692,7 @@
 							game.add.tween(map[toI][toJ].object).to({
 								x: (itemwidth  * toJ) + marginw,
 								y: (itemheight * toI) + marginh
-							}, 200, Phaser.Easing.Back.Out, true);
+							}, 150, Phaser.Easing.Back.Out, true);
 							queue.shift();
 						}while(queue.length > 0 && queue[0][0] == 'move' && queue[0][5] == nowPhase);
 					} else if (queue[0][0] == 'bomb') {
@@ -664,17 +700,13 @@
 						var i = queue[0][1], j = queue[0][2];
 						map[i][j].object.destroy();
 						map[i][j] = 'Removed!';
-						/*
-						if (playingnow == false) {
-							var music = game.add.audio('fireworks');
-							music.play();
-							playingnow = true;
-						}
-						*/
 
-						var effect = game.add.sprite(itemwidth * (j) - 16, itemheight * (i) - 16, 'effect');
-						effect.animations.add('destroy');
-						effect.animations.play('destroy', 180, false, true);
+						if(i > Height / 3)
+						{
+							var effect = game.add.sprite(itemwidth * (j) - 16, itemheight * (i) - 16, 'effect');
+							effect.animations.add('destroy');
+							effect.animations.play('destroy', 240, false, true);
+						}
 						
 						var music = game.add.audio('fireworks');
 						music.play();
@@ -684,9 +716,12 @@
 //						queue.push(['newItem', i, j]);
 						var i = queue[0][1], j = queue[0][2];
 
-						var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
-						effect.animations.add('destroy');
-						effect.animations.play('destroy', 180, false, true);
+						if(i > Height / 3)
+						{
+							var effect = game.add.sprite(map[i][j].object.x, map[i][j].object.y, 'effect');
+							effect.animations.add('destroy');
+							effect.animations.play('destroy', 240, false, true);
+						}
 						
 						map[i][j].object.destroy();
 						map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
@@ -708,7 +743,7 @@
 							map[i][j].object.height = itemheight - marginh*2;
 							game.add.tween(map[i][j].object).to({
 								y: itemheight * i + marginh
-							}, 200, Phaser.Easing.Back.Out, true);
+							}, 150, Phaser.Easing.Back.Out, true);
 							queue.shift();
 						}while(queue.length > 0 && queue[0][0] == 'newShape' && queue[0][5] == nowPhase);
 					}
@@ -809,18 +844,33 @@
 		return newShape;
 	}
 	//사용자 조작 부분에서 매칭이 존재하지 않고, 답이 존재하기 맵을 제작
+
+	function isHaveAnswer()
+	{
+		var haveAnswer = false;
+		for(var i=0; i<2; i++) for(var j=0; j<Width; j++)
+			if(isSwappable([i, j], [i+1, j])) {
+				haveAnswer = true;  break;
+			}
+		if(haveAnswer) return true;
+		for(var i=0; i<3; i++) for(var j=1; j<Width; j++)
+			if(isSwappable([i, j], [i, j-1])) {
+				haveAnswer = true;  break;
+			}
+		if(haveAnswer) return true;
+	}
 	function initShapeWithNoMatchingAndHaveAnswer(Height, Width) {
 		while(1) {
 			initShapeWithNoMatching(Height, Width);
 			var haveAnswer = false;
 			for(var i=0; i<2; i++) for(var j=0; j<Width; j++)
 				if(isSwappable([i, j], [i+1, j])) {
-					haveAnswer = true; console.log([i, j]); break;
+					haveAnswer = true;  break;
 				}
 			if(haveAnswer) return true;
 			for(var i=0; i<3; i++) for(var j=1; j<Width; j++)
 				if(isSwappable([i, j], [i, j-1])) {
-					haveAnswer = true; console.log([i, j]); break;
+					haveAnswer = true;  break;
 				}
 			if(haveAnswer) return true;
 		}
@@ -993,10 +1043,9 @@
         }
 
         var nowRandType = getRandom(ShapeType);
-        for(var ix in randomList)
+        for(var i=0; i<Height/2; i++) for(var j=0; j<Width; j++)
         {
-            var i = randomList[ix][0], j = randomList[ix][1];
-            if(cnt >= Height*Width/3) break;
+            if(cnt >= Height*Width/15) break;
 //            console.log(cnt);
             if(Shape[i][j].type == 'standard' && Shape[i][j].num == nowRandType)
             {
@@ -1018,7 +1067,7 @@
         for(var ix in randomList)
         {
             var i = randomList[ix][0], j = randomList[ix][1];
-            if(cnt >= Height*Width/3) break;
+            if(cnt >= Height*Width/15) break;
 //            console.log(cnt);
             if(Shape[i][j].type == 'standard')
             {
@@ -1146,85 +1195,100 @@
 		return isSame;
 	}
 
+	function getScore() {
+		var cnt = new Array(getRandom(ShapeType));
+		for(var i=0; i<ShapeType; i++) cnt[i] = 0;
+
+		for(var j=0; j<Width; j++)
+				if(Shape[3][j].type == 'standard')
+						cnt[Shape[3][j].num]++;
+
+		var score = 0;
+		for(var i=0; i<ShapeType; i++)
+			if(cnt[i] >= 3) 
+				score += cnt[i] * cnt[i];
+		return score;
+
+	}
 
 
-		function letsMakeJackpotBefore() {
-				var virtual = initShapeWithValue(Height, Width);
-				for(var j=0; j<Width; j++) {
-						var newIx = 0;
-						for(var i=0; i<Height; i++) {
-								if(Shape[i][j].num != '*') {
-										virtual[newIx][j] = Shape[i][j];
-										newIx++;
-								}
-						}
-						for(var i=newIx; i<Height; i++) {
-								virtual[i][j] = new item('other', '*');
-						}
-				}
-				var cnt = new Array(getRandom(ShapeType));
-				for(var i=0; i<ShapeType; i++) cnt[i] = 0;
+	function letsMakeJackpotBefore() {
+			var virtual = initShapeWithValue(Height, Width);
+			for(var j=0; j<Width; j++) {
+					var newIx = 0;
+					for(var i=0; i<Height; i++) {
+							if(Shape[i][j].num != '*') {
+									virtual[newIx][j] = Shape[i][j];
+									newIx++;
+							}
+					}
+					for(var i=newIx; i<Height; i++) {
+							virtual[i][j] = new item('other', '*');
+					}
+			}
+			var cnt = new Array(getRandom(ShapeType));
+			for(var i=0; i<ShapeType; i++) cnt[i] = 0;
 
-				for(var j=0; j<Width; j++)
-						if(virtual[3][j].type == 'standard')
-								cnt[virtual[3][j].num]++;
-				console.log("before");
-				console.log(cnt);
-				var maxIx = 0;
-				for(var i=1; i<ShapeType; i++)
-						if(cnt[maxIx] < cnt[i])
-								maxIx = i;
+			for(var j=0; j<Width; j++)
+					if(virtual[3][j].type == 'standard')
+							cnt[virtual[3][j].num]++;
+			console.log("before");
+			console.log(cnt);
+			var maxIx = 0;
+			for(var i=1; i<ShapeType; i++)
+					if(cnt[maxIx] < cnt[i])
+							maxIx = i;
 
-				for(var j=0; j<Width; j++) 
-				{
-						if(virtual[3][j].type == 'other') continue;
-						if(virtual[3][j].num == maxIx) continue;
-						for(var i=0; i<Height; i++)
-								changeShape(i, j, 'other', '*');
-				}
-		}
-		function letsMakeJackpotAfter() {
-				var movementList = [];
-				for(var j=0; j<Width; j++) {
-						var newIx = 0;
-						for(var i=0; i<Height; i++) {
-								if(Shape[i][j].num != '*') {
-										if(i != newIx)
-												movementList.push(['move', i, j, newIx, j])
-										//(i, j) -> (newIx, j);
+			for(var j=0; j<Width; j++) 
+			{
+					if(virtual[3][j].type == 'other') continue;
+					if(virtual[3][j].num == maxIx) continue;
+					for(var i=0; i<Height; i++)
+							changeShape(i, j, 'other', '*');
+			}
+	}
+	function letsMakeJackpotAfter() {
+			var movementList = [];
+			for(var j=0; j<Width; j++) {
+					var newIx = 0;
+					for(var i=0; i<Height; i++) {
+							if(Shape[i][j].num != '*') {
+									if(i != newIx)
+											movementList.push(['move', i, j, newIx, j])
+									//(i, j) -> (newIx, j);
 
-										substituteShapeWithMap([newIx, j], [i, j]);
-										newIx++;		
-								}
-						}
-						for(var i=newIx; i<Height; i++) {
-								Shape[i][j] = new item('other', '*');
-						}
-				}
-	
-				var cnt = new Array(getRandom(ShapeType));
-				for(var i=0; i<ShapeType; i++) cnt[i] = 0;
+									substituteShapeWithMap([newIx, j], [i, j]);
+									newIx++;		
+							}
+					}
+					for(var i=newIx; i<Height; i++) {
+							Shape[i][j] = new item('other', '*');
+					}
+			}
 
-				for(var j=0; j<Width; j++)
-						if(Shape[3][j].type == 'standard')
-								cnt[Shape[3][j].num]++;
-				var maxIx = 0;
-				for(var i=1; i<ShapeType; i++)
-						if(cnt[maxIx] < cnt[i])
-								maxIx = i;
-				console.log("after");
-				console.log(cnt);
-				for(var j=0; j<Width; j++) {
-						for(var i=0; i<Height; i++) {
-								if(Shape[i][j].equals(new item('other', '*')) == false) continue;
-								Shape[i][j] = newRandomShape();
-								if(i == 3) Shape[i][j] = new item('standard', maxIx);
-								movementList.push(['newShape', Shape[i][j].type, Shape[i][j].num, i, j]);
-								//Shape(type, num) -> (i, j)
-						}
-				}
-				return movementList;
-		}
+			var cnt = new Array(getRandom(ShapeType));
+			for(var i=0; i<ShapeType; i++) cnt[i] = 0;
+
+			for(var j=0; j<Width; j++)
+					if(Shape[3][j].type == 'standard')
+							cnt[Shape[3][j].num]++;
+			var maxIx = 0;
+			for(var i=1; i<ShapeType; i++)
+					if(cnt[maxIx] < cnt[i])
+							maxIx = i;
+			console.log("after");
+			console.log(cnt);
+			for(var j=0; j<Width; j++) {
+					for(var i=0; i<Height; i++) {
+							if(Shape[i][j].equals(new item('other', '*')) == false) continue;
+							Shape[i][j] = newRandomShape();
+							if(i == 3) Shape[i][j] = new item('standard', maxIx);
+							movementList.push(['newShape', Shape[i][j].type, Shape[i][j].num, i, j]);
+							//Shape(type, num) -> (i, j)
+					}
+			}
+			return movementList;
+	}
 
 
 </script>
