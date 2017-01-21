@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>운빨좆망겜</title>
+<title>이미지팡팡</title>
 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <script src="phaser.min.js"></script>
 <link href="https://fonts.googleapis.com/css?family=Noto+Sans" rel="stylesheet">
@@ -90,9 +90,12 @@
 	}
 	#bonusgame {
 		position: absolute;
-		left: calc((1024 - 800) / 2);
-		top: calc((768 - 600) / 2);
-		z-index: 600;
+		left: 112px;
+		top: 84px;
+		width: 800px;
+		height: 600px;
+		z-index: 6000;
+		display: none;
 	}
 	.vertical {
 		transform: rotate(-90deg);
@@ -160,6 +163,12 @@
 	
 	var timenow = 0;
 	var int_progress;
+
+	var presents = {a: 0,
+				   c: 1,
+				   b: 2,
+				   p: 3}
+	
 	
 	var item = function(type, num) {
 		if (type == null && num == null) {
@@ -521,7 +530,7 @@
 							queue.push(['bomb', i, j]);
 							bombCnt++;
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
-							queue.push(['newItem', i, j]);
+							queue.push(['newItem', i, j, Shape[height-i-1][j]['num']]);
 						} else {
 							//console.log('other ' + i + ',' + j);
 						}
@@ -554,7 +563,7 @@
 							queue.push(['bomb', i, j]);
 							bombCnt++;
 						} else if (Shape[height-i-1][j]['type'] == 'other' && map[i][j]['type'] != 'other') {
-							queue.push(['newItem', i, j]);
+							queue.push(['newItem', i, j, Shape[height-i-1][j]['num']]);
 						} else {
 							//console.log('other ' + i + ',' + j);
 						}
@@ -612,6 +621,17 @@
 							
 							document.getElementById("jackpot").style.display = 'block';
 							document.getElementById("jackpot").style.opacity = '1';
+							setTimeout(function() {
+								document.getElementById("jackpot").style.display = 'none;';
+								document.getElementById("jackpot").style.opacity = '0';
+							}, 1000);
+							
+							//TODO: jackpot
+							clearInterval(int_progress);
+							setTimeout(function() {
+								document.getElementById('bonusgame').style.display = 'block';
+								bonusgame = new Phaser.Game(width_bonusgame, height_bonusgame, Phaser.AUTO, document.getElementById("bonusgame"), { preload: preload, create: create, update: update });
+							}, 2000);
 							
 						}else if (randValue == 0) {
 							var newtheme = (theme + game.rnd.between(1, 2)) % 3;
@@ -671,7 +691,8 @@
 											if (map[i][j]['type'] == 'standard') {
 												map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "item_" + theme + "_" + map[i][j]['num']);
 											} else {
-												map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + theme);
+												//TODO: remove random from here
+												map[i][j].object = game.add.sprite(itemwidth * j + marginw, itemheight * i + marginh, "special_" + (0|Math.random()*special_img.length));
 											}
 											map[i][j].object.width = itemwidth - marginw*2;
 											map[i][j].object.height = itemheight - marginh*2;
@@ -809,7 +830,7 @@
 	var sameWidth = initArray(Height, Width), sameHeight = initArray(Height, Width);
 		//printShape(Shape);
 
-	var itemNum = [['?','?'],['?','?'],['?','?'],['*','*'],['-','|'],['p','p']];
+	var itemNum = [['?','?'],['?','?'],['?','?'],['*','*'],['c','a'],['p','p']];
 	//var playGameIntervalid = setInterval(playGame, 500);
 	var levelCnt = 0;
 
@@ -1086,7 +1107,7 @@
 				for(var k=0; k<Width; k++)
 				if(Shape[i][k].type == 'standard')
 					changeShape(i, k, 'other', '*');
-			} else if(Shape[i][j].num == '|') {
+			} else if(Shape[i][j].num == 'a') {
 				changeShapeByItem(i, j, 'other', '*');
 				for(var k=0; k<Height; k++)
 				if(Shape[k][j].type == 'standard')
@@ -1148,7 +1169,7 @@
 	function changeShapeByItem(i, j, type, num) {
 		//TODO
 		Shape[i][j] = new item(type, num);
-		console.log(['changeShapeByItem', i, j, type, num]);
+//		console.log(['changeShapeByItem', i, j, type, num]);
 		//(i, j) Shape change -> (type, num)
 	}
 	//특정점 p0, p1에 대해서 Swap이 가능한지 True, False로 반환함.
@@ -1372,6 +1393,7 @@
 <script>
 	var width_bonusgame = 800, height_bonusgame = 600;
 	//var bonusgame = new Phaser.Game(width_bonusgame, height_bonusgame, Phaser.AUTO, document.getElementById("bonusgame"), { preload: preload, create: create, update: update });
+	var bonusgame;
 	var timer = 0;
 	var total = 0;
 	var isPlayingBgm=false;
@@ -1384,14 +1406,14 @@
 	function preload() {
 
 		for (i=0; i<5; i++){
-			var temp = spaces[i];
-			bonusgame.load.spritesheet(temp,temp + ".png");
+			var temp = themes[theme] + '_' + (i+1);
+			bonusgame.load.spritesheet(temp,'bonus/' + temp + ".png");
 		}
-		bonusgame.load.spritesheet('effect','effect.png',128,128);
-		bonusgame.load.audio('bonus_background','bonus_background.mp3');
-		bonusgame.load.audio('bonus_pick','bonus_pick.mp3');
+		bonusgame.load.spritesheet('effect','bonus/effect.png',128,128);
+		bonusgame.load.audio('bonus_background','bonus/bonus_background.mp3');
+		bonusgame.load.audio('bonus_pick','bonus/bonus_pick.mp3');
 
-		bonusgame.load.image('space', 'space.jpg');
+		bonusgame.load.image(themes[theme], 'bonus/'+themes[theme]+'.jpg');
 
 	}
 
@@ -1401,7 +1423,7 @@
 		timer = bonusgame.time.now;
 		endTime = bonusgame.time.now + 5*1000;
 
-		var background = bonusgame.add.sprite(0, 0, 'space');
+		var background = bonusgame.add.sprite(0, 0, themes[theme]);
 		background.scale.setTo(1.5,1.5);
 		background.addChild(text)
 
@@ -1409,7 +1431,7 @@
 
 	function releaseTargets() {
 
-			var temp = spaces[0|Math.random() * 5];
+			var temp = themes[theme] + '_' + (0|Math.random() * 5+1);
 			var icon = bonusgame.add.sprite(-100, bonusgame.world.randomY, temp);
 			icon.inputEnabled = true;
 			icon.events.onInputDown.add(clicked,this);
@@ -1419,19 +1441,16 @@
 
 	function update() {
 		if(bonusgame.time.now<endTime) {
-			if(!isPlayingBgm)
-			{
+			if(!isPlayingBgm){
 				var sound=new Phaser.Sound(bonusgame,'bonus_background');
-				if(sound.isDecoded)
-				{
+				if(sound.isDecoded){
 					sound.play();
 					console.log(sound);
 					isPlayingBgm=true;
 				}
 			}
 
-			if (bonusgame.time.now > timer)
-			{
+			if (bonusgame.time.now > timer){
 				timer=timer+250;
 				releaseTargets();
 				updateText();
@@ -1443,6 +1462,18 @@
 	function closeBonusGame() {
 		// Bonus Game Should be close in here
 		console.log("Bonus Game Should be close in here");
+		clearInterval(int_progress);
+		document.getElementById('bonusgame').style.display = 'none';
+		document.getElementById('jackpot').style.display = 'none';
+		int_progress = setInterval(function() {
+			timenow = timenow - 1;
+			document.getElementById('progress').setAttribute('style', 'width: ' + parseInt(timenow/timemax*100) + '%');
+			if (timenow == 0) {
+				//TODO: time over
+				clearInterval(int_progress);
+			}
+		}, 1000);
+		bonusgame.destroy();
 	}
 
 	function clicked(sprite) {
